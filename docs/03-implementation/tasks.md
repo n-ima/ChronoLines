@@ -52,10 +52,14 @@
     typecheck エラー0・npm test 108/108（デグレなし）。
     メモ: ブランド付与は yearSchema 末尾の恒等 transform 1箇所に閉じ込め（z.brand は year.ts と
     非互換のため不採用）。DUP-ID は persons/events の名前空間別で判定
-- [ ] TASK-004: `src/domain/migrate.ts` — loadStore と移行チェーン（migrations 登録簿〔現行空〕・LoadResult・判定手順5段階）+ 単体テスト
+- [x] TASK-004: `src/domain/migrate.ts` — loadStore と移行チェーン（migrations 登録簿〔現行空〕・LoadResult・判定手順5段階）+ 単体テスト
   - 対応要件: US-010 / 対応設計: data-model.md 5章
   - 完了条件: 正常v1 / JSONパース不能→CORRUPT / schemaVersion 欠落→CORRUPT /
     新版→NEWER_SCHEMA / 検証失敗→CORRUPT（detail に Zod issue）の Vitest が全パス
+  - 証拠 (2026-08-12): migrate.test.ts 20/20 pass（指定5ケース+旧版欠番→CORRUPT を網羅、
+    detail は Zod issue 先頭5件+「ほか n 件」書式）・typecheck エラー0・npm test 128/128。
+    メモ: 移行成功パス（migratedFrom 付与）は登録簿が空の現行では検証不能、
+    移行追加時にテストを足す契約を migrate.ts コメントに明記
 - [ ] TASK-005: `src/domain/query.ts` — 行導出と範囲決定（sortedPersonIds・filterByTags・filterEventsByTags・allTags・searchPersons・autoRange・eventsByColumn）+ 単体テスト
   - 対応要件: US-003/006/008 / 対応設計: domain-logic.md 2章
   - 完了条件: 安定ソート（同年生まれは月日→名前→id、月日無指定は末尾）/ OR絞り込み
