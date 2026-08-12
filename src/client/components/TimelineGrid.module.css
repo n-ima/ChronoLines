@@ -1,0 +1,155 @@
+/* 年表グリッド（screen-01-main-grid.html の .grid-scroll/.grid-row/.name-cell/.cell/.yh 相当）。
+   色は tokens.css のトークンのみ。列幅・行高・人物列幅・ヘッダー高は仮想化の座標計算と
+   共有するため timelineGridModel.ts の定数からインラインスタイルで与える（二重管理しない） */
+
+.scroll {
+  flex: 1;
+  overflow: auto;
+  background: var(--color-bg);
+}
+
+.inner {
+  position: relative;
+}
+
+/* ===== 年ヘッダー行（上に sticky。screen-01 .grid-row.year-header） ===== */
+.yearHeader {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: var(--color-bg);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.cornerCell {
+  position: sticky;
+  left: 0;
+  z-index: 4;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-2);
+  font-weight: 600;
+  font-size: 13px;
+  background: var(--color-surface);
+  border-right: 2px solid var(--color-border-strong);
+}
+
+.yearCell {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: var(--space-1);
+  font-size: 11px;
+  color: var(--color-text-muted);
+  border-right: 1px solid var(--color-border);
+}
+
+/* ===== 本体（行 = 人物。screen-01 .grid-row） ===== */
+.body {
+  position: relative;
+}
+
+.row {
+  position: absolute;
+  left: 0;
+  width: 100%;
+}
+
+/* 人物列（左に sticky。screen-01 .name-cell） */
+.nameCell {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 var(--space-2);
+  background: var(--color-surface);
+  border-right: 2px solid var(--color-border-strong);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.name {
+  font-weight: 600;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.years {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.tagDots {
+  display: inline-flex;
+  gap: 3px;
+  margin-left: auto;
+  flex: none;
+}
+
+.tagDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: block;
+}
+
+/* ===== セル（screen-01 .cell）。色 + 括弧書式 + 下端帯の識別チャネル（design-tokens.md） ===== */
+.cell {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-cell);
+  border-right: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.alive {
+  background: var(--color-alive-bg);
+  color: var(--color-alive-text);
+  font-weight: 600;
+}
+
+.virtual {
+  background: var(--color-virtual-bg);
+  color: var(--color-virtual-text);
+}
+
+/* 生存/仮想の帯（セル下端3px。識別の主チャネル。design-tokens.md） */
+.alive::after,
+.virtual::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+}
+
+.alive::after {
+  background: var(--color-alive-band);
+}
+
+.virtual::after {
+  background: var(--color-virtual-band);
+}
+
+/* ===== 列の縦罫線の強調（年ヘッダー・セル共通。ui-timeline-grid.md 2章） ===== */
+.guideCol {
+  border-right-color: var(--color-border-strong);
+}
+
+.currentCol {
+  border-right: 2px solid var(--color-current-year);
+}

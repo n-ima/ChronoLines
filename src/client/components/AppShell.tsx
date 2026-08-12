@@ -14,6 +14,7 @@ import controls from './controls.module.css';
 import { RootErrorBoundary } from './RootErrorBoundary';
 import { SaveErrorBanner } from './SaveErrorBanner';
 import screen from './statusScreen.module.css';
+import { TimelineGrid } from './TimelineGrid';
 import { Toolbar } from './Toolbar';
 
 // 409 応答（E-STORE-CORRUPT / E-STORE-NEWER）のうち表示に使う部分だけ読む
@@ -77,13 +78,20 @@ function ReadyContent() {
     // 黙って空画面にせず明示的に失敗させる（ルートエラー境界が受ける）
     throw new Error('ストアが未初期化のまま年表画面が描画されました');
   }
+  const active = store.timelines.find((t) => t.id === store.activeTimelineId);
+  if (active === undefined) {
+    // storeSchema の参照整合性検証済みのため通常到達しない（Toolbar と同じ明示的失敗）
+    throw new Error('E-STORE-ACTIVE-MISSING: activeTimelineId が timelines に存在しません');
+  }
   return (
     <div className={styles.shell}>
       <Toolbar store={store} />
       {/* 保存失敗の常設バナーはグリッド上部全幅（design-tokens.md 部品の共通規則） */}
       <SaveErrorBanner />
-      {/* 年表グリッド（TimelineGrid）は TASK-104。ここではシェルの器だけを用意する */}
-      <main className={styles.main} aria-label="年表グリッド" />
+      {/* main はグリッド + サイドパネル（TASK-107）の横並びの器（screen-01 .main） */}
+      <main className={styles.main} aria-label="年表グリッド">
+        <TimelineGrid timeline={active} />
+      </main>
       <ConflictDialog />
     </div>
   );

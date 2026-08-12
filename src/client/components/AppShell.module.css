@@ -5,8 +5,10 @@
   height: 100%;
 }
 
+/* グリッド（スクロールは TimelineGrid 自身が持つ）+ サイドパネル（TASK-107）の横並びの器 */
 .main {
   flex: 1;
-  overflow: auto;
+  display: flex;
+  overflow: hidden;
   background: var(--color-bg);
 }
