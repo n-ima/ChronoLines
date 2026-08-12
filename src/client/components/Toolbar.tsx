@@ -1,11 +1,32 @@
-// ツールバーの枠（TASK-101）。構成・見た目は screen-01-main-grid.html のとおり。
-// 各コントロールの動作の配線は後続タスクの管轄: 年表切替=TASK-113、検索=TASK-109、
-// タグ=TASK-110、並び順=TASK-111、範囲=TASK-112、ズーム=TASK-108、＋人物=TASK-105、
-// ＋イベント=TASK-106、入出力=TASK-201/202、画像出力=TASK-204、保存状態表示=TASK-103。
-// それまでは disabled の枠として置く（表示値はストアの実データを反映する）。
+// ツールバーの枠（TASK-101）+ 保存状態表示（TASK-103）。構成・見た目は
+// screen-01-main-grid.html のとおり。各コントロールの動作の配線は後続タスクの管轄:
+// 年表切替=TASK-113、検索=TASK-109、タグ=TASK-110、並び順=TASK-111、範囲=TASK-112、
+// ズーム=TASK-108、＋人物=TASK-105、＋イベント=TASK-106、入出力=TASK-201/202、
+// 画像出力=TASK-204。それまでは disabled の枠として置く（表示値はストアの実データを反映する）。
 import type { Store } from '../../domain/schema';
+import { useSaveStore } from '../store/autosave';
 import controls from './controls.module.css';
 import styles from './Toolbar.module.css';
+
+// 保存状態（ツールバー右端。screen-01/-04 の save-state）: 通常時は「保存済み HH:mm:ss」、
+// 保存失敗・競合の解決待ち中は danger 色で「未保存の変更あり」（server-api.md 5章）
+function SaveStatus() {
+  const savedAt = useSaveStore((s) => s.savedAt);
+  const unsaved = useSaveStore((s) => s.failed || s.conflict);
+  if (unsaved) {
+    return (
+      <span className={styles.saveStateDirty} role="status">
+        未保存の変更あり
+      </span>
+    );
+  }
+  // savedAt が null のうち（起動直後・未保存）は空のステータス領域を保つ
+  return (
+    <span className={styles.saveState} role="status">
+      {savedAt === null ? '' : `保存済み ${savedAt}`}
+    </span>
+  );
+}
 
 export function Toolbar({ store }: { store: Store }) {
   const active = store.timelines.find((t) => t.id === store.activeTimelineId);
@@ -84,6 +105,7 @@ export function Toolbar({ store }: { store: Store }) {
       <button type="button" className={controls.btn} disabled>
         画像出力
       </button>
+      <SaveStatus />
     </header>
   );
 }

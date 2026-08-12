@@ -107,11 +107,16 @@
     storeSchema.parse による整合性検証）・typecheck エラー0・npm test 251/251。
     メモ: 全ミューテーションを mutate() 一点に集約（TASK-103 の自動保存差し込み口）。
     manual 切替初回は現在の生年順を初期値化。表示中年表削除時は同位置の年表へ切替
-- [ ] TASK-103: 自動保存プロトコルと保存状態UI（全ミューテーション後の500msデバウンスPUT・pagehide時の keepalive フラッシュ・rev管理・「保存済み HH:mm:ss」表示・E-REV-CONFLICT 競合ダイアログ〔読み直し/上書き=GET→再PUT〕・ネットワークエラー/5xx の常設バナー+再試行+以後の変更で自動再試行）
+- [x] TASK-103: 自動保存プロトコルと保存状態UI（全ミューテーション後の500msデバウンスPUT・pagehide時の keepalive フラッシュ・rev管理・「保存済み HH:mm:ss」表示・E-REV-CONFLICT 競合ダイアログ〔読み直し/上書き=GET→再PUT〕・ネットワークエラー/5xx の常設バナー+再試行+以後の変更で自動再試行）
   - 対応要件: US-009 / 対応設計: server-api.md 5章
   - 完了条件: fetch をモックした Vitest（デバウンス集約・rev更新・競合分岐・失敗時の
     メモリ保持と再試行）が全パス / 実行時確認: 編集後500msで chronolines.json が更新され
     「保存済み」表示が出る。2タブ同時編集で競合ダイアログが出る
+  - 証拠 (2026-08-12): autosave.test.ts 22/22 pass（fake timers で決定的に検証）・typecheck エラー0・
+    npm test 273/273・Playwright 機械確認 8/8（500ms後のファイル更新・保存済み表示・
+    2タブ競合ダイアログ・読み直し/上書き分岐）。メモ: 保存状態表示はモックアップ優先で
+    ツールバー右端（設計5章の「右下」と乖離、見た目の正はモックアップ）。
+    DEV時のみ window.__chronolines にストア露出（E2E用最小フック）
 - [ ] TASK-104: TimelineGrid（1年ズーム）— 行・列2軸仮想化（列44px・行28px・人物列200px・オーバースキャン5）・sticky 人物列（名前+生没年併記+タグ色ドット最大4+ツールチップ）・年ヘッダー・cellValue に基づくセル描画（blank/alive/virtual の色+括弧書式の二重チャネル）・セルのホバーツールチップ・10倍数年の縦罫線と現在年の強調罫線
   - 対応要件: US-002/005 / 対応設計: ui-timeline-grid.md 1〜2章、ADR 0003、screen-01
   - 完了条件: 実行時確認: 検証データ（chronolines.json 直接編集で投入可。フォームは TASK-105）で

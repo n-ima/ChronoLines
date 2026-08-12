@@ -65,3 +65,14 @@
   /* トグルの選択側は「primary塗り + 白文字」（design-tokens.md 部品の共通規則） */
   color: #ffffff;
 }
+
+/* 保存状態（screen-01 .save-state）。失敗・競合中は danger 色で「未保存の変更あり」 */
+.saveState {
+  font-size: var(--font-size-small);
+  color: var(--color-text-muted);
+}
+
+.saveStateDirty {
+  composes: saveState;
+  color: var(--color-danger);
+}

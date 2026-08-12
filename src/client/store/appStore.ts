@@ -3,13 +3,14 @@
 // 書き換えない（stack-conventions）。ミューテーション後のストアは常に storeSchema の
 // 参照整合性（data-model.md 2章の5規則）を満たすことをコードで保証する
 // （Zod による検証は境界 = 保存・取り込みで行う設計のため。同 2章補足）。
-// 自動保存（500msデバウンス PUT・rev 管理）は TASK-103 の管轄。ユーザー操作による
-// 変更はすべて mutate()（と replaceStore）を通るので、スケジュール処理はそこへ足す。
+// 自動保存（500msデバウンス PUT・rev 管理）の本体は store/autosave.ts。ユーザー操作による
+// 変更はすべて mutate()（と replaceStore）を通り、そこから notifyMutation() で自動保存に乗る。
 import { create } from 'zustand';
 
 import { sortedPersonIds } from '../../domain/query';
 import type { Person, Store, Timeline, TimelineEvent } from '../../domain/schema';
 import type { StoredYear } from '../../domain/year';
+import { notifyMutation } from './autosave';
 
 // 入力はフォーム層（TASK-105/106）で検証済みの値を受け取る前提（data-model.md 4章）。
 // id はストア側で採番するため入力に含めない
@@ -140,13 +141,14 @@ function renumberTimeline(source: Timeline): Timeline {
 
 export const useAppStore = create<AppState>()((set, get) => {
   // 全ミューテーション共通の適用口。recipe が例外を投げたら state は一切変わらない。
-  // TASK-103: 自動保存（500msデバウンス PUT）のスケジュールはここに一元追加する
   const mutate = (recipe: (store: Store) => Store): void => {
     const current = get().store;
     if (current === null) {
       throw new Error('ストアが未初期化です（initializeStore の前にミューテーションが呼ばれました）');
     }
     set({ store: recipe(current) });
+    // ユーザー操作による変更は必ず自動保存に乗せる（500msデバウンスPUT。server-api.md 5章）
+    notifyMutation();
   };
 
   return {
@@ -349,8 +351,10 @@ export const useAppStore = create<AppState>()((set, get) => {
     replaceStore: (store) => {
       // インポート「すべて置き換え」・リカバリ用（US-011）。リカバリ画面（初期ロード失敗 =
       // store が null）からも使うため mutate（未初期化チェック）を通さない。
-      // TASK-103: これもユーザー操作による変更なので自動保存のスケジュール対象にする
+      // これもユーザー操作による変更なので自動保存の対象にする（初期ロードの
+      // initializeStore・競合読み直しの注入との違いはこの1点）
       set({ store });
+      notifyMutation();
     },
 
     appendTimelines: (timelines) => {

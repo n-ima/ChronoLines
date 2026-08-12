@@ -1,21 +1,20 @@
 // アプリシェル（ui-timeline-grid.md 1章・9章）: ルートエラー境界 + 起動時ロードの状態切替。
-// ロード成功後のデータの正は appStore（Zustand。TASK-102）が保持し、本コンポーネントは
-// ロードフェーズの管理だけを持つ。自動保存・rev 管理は TASK-103、グリッドは TASK-104、
-// リカバリ画面の本実装（復旧操作）は TASK-203 の管轄。
+// ロード成功後のデータの正は appStore（Zustand。TASK-102）が保持し、自動保存・rev 管理は
+// store/autosave.ts（TASK-103）が担う。本コンポーネントはロードフェーズの管理と自動保存の
+// 開始だけを持つ。グリッドは TASK-104、リカバリ画面の本実装（復旧操作）は TASK-203 の管轄。
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { z } from 'zod';
 
-import { storeSchema, type Store } from '../../domain/schema';
+import type { Store } from '../../domain/schema';
 import { useAppStore } from '../store/appStore';
+import { startAutosave, storeResponseSchema } from '../store/autosave';
 import styles from './AppShell.module.css';
+import { ConflictDialog } from './ConflictDialog';
 import controls from './controls.module.css';
 import { RootErrorBoundary } from './RootErrorBoundary';
+import { SaveErrorBanner } from './SaveErrorBanner';
 import screen from './statusScreen.module.css';
 import { Toolbar } from './Toolbar';
-
-// GET /api/store の成功応答（server-api.md 3章）。ローカルサーバーの応答も境界で型を
-// 確定させる（storeSchema はブランド型 StoredYear の付与も担うためキャストしない）
-const storeResponseSchema = z.object({ rev: z.number().int(), store: storeSchema });
 
 // 409 応答（E-STORE-CORRUPT / E-STORE-NEWER）のうち表示に使う部分だけ読む
 const apiErrorSchema = z.object({
@@ -30,8 +29,8 @@ const apiErrorSchema = z.object({
 
 type LoadState =
   | { phase: 'loading' }
-  // rev は自動保存の楽観ロック用（TASK-103 の管轄）。データ本体は appStore が正
-  | { phase: 'ready'; rev: number }
+  // ready 後のデータ本体は appStore が正、rev は autosave セッションが管理する
+  | { phase: 'ready' }
   | { phase: 'connection-error' }
   | {
       phase: 'store-error'; // サーバーには繋がるが保存データが読めない（corrupt / newer）
@@ -81,8 +80,11 @@ function ReadyContent() {
   return (
     <div className={styles.shell}>
       <Toolbar store={store} />
+      {/* 保存失敗の常設バナーはグリッド上部全幅（design-tokens.md 部品の共通規則） */}
+      <SaveErrorBanner />
       {/* 年表グリッド（TimelineGrid）は TASK-104。ここではシェルの器だけを用意する */}
       <main className={styles.main} aria-label="年表グリッド" />
+      <ConflictDialog />
     </div>
   );
 }
@@ -103,7 +105,17 @@ function ShellContent() {
       if (next.phase === 'ready') {
         // データの正を appStore へ注入する（初期ロードなので自動保存はかからない）
         useAppStore.getState().initializeStore(next.store);
-        setLoad({ phase: 'ready', rev: next.rev });
+        // 以後のミューテーションを 500ms デバウンス PUT に乗せる（rev は楽観ロックの起点）
+        startAutosave({
+          rev: next.rev,
+          getStore: () => useAppStore.getState().store,
+          // 競合の「読み直し」はユーザー操作による変更ではないため initializeStore
+          //（自動保存の対象外）で注入する
+          applyServerStore: (store) => {
+            useAppStore.getState().initializeStore(store);
+          },
+        });
+        setLoad({ phase: 'ready' });
         return;
       }
       setLoad(next);
