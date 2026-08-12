@@ -12,6 +12,8 @@ Thumbs.db
 node_modules/
 dist/
 build/
+test-results/
+playwright-report/
 
 # フック判定ログ(振り返り用のローカル記録。コミットしない)
 .github/hooks/logs/
