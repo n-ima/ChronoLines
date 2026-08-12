@@ -1,11 +1,12 @@
 // アプリシェル（ui-timeline-grid.md 1章・9章）: ルートエラー境界 + 起動時ロードの状態切替。
-// TASK-101 の管轄は GET /api/store による初期ロードとシェル表示まで。
-// ストア管理の本実装（Zustand・ミューテーション）は TASK-102、自動保存は TASK-103、
-// グリッドは TASK-104、リカバリ画面の本実装（復旧操作）は TASK-203 の管轄。
-import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
+// ロード成功後のデータの正は appStore（Zustand。TASK-102）が保持し、本コンポーネントは
+// ロードフェーズの管理だけを持つ。自動保存・rev 管理は TASK-103、グリッドは TASK-104、
+// リカバリ画面の本実装（復旧操作）は TASK-203 の管轄。
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { z } from 'zod';
 
 import { storeSchema, type Store } from '../../domain/schema';
+import { useAppStore } from '../store/appStore';
 import styles from './AppShell.module.css';
 import controls from './controls.module.css';
 import { RootErrorBoundary } from './RootErrorBoundary';
@@ -29,7 +30,8 @@ const apiErrorSchema = z.object({
 
 type LoadState =
   | { phase: 'loading' }
-  | { phase: 'ready'; rev: number; store: Store }
+  // rev は自動保存の楽観ロック用（TASK-103 の管轄）。データ本体は appStore が正
+  | { phase: 'ready'; rev: number }
   | { phase: 'connection-error' }
   | {
       phase: 'store-error'; // サーバーには繋がるが保存データが読めない（corrupt / newer）
@@ -40,7 +42,9 @@ type LoadState =
       fileVersion?: number;
     };
 
-async function fetchInitialStore(): Promise<LoadState> {
+type FetchResult = Exclude<LoadState, { phase: 'ready' }> | { phase: 'ready'; rev: number; store: Store };
+
+async function fetchInitialStore(): Promise<FetchResult> {
   let response: Response;
   let body: unknown;
   try {
@@ -66,7 +70,24 @@ async function fetchInitialStore(): Promise<LoadState> {
   return { phase: 'store-error', code, message, detail, dataPath, fileVersion };
 }
 
-function ShellContent({ storeRef }: { storeRef: RefObject<Store | null> }) {
+// ready フェーズの中身。appStore を購読し、以後のミューテーションが表示へ反映される
+function ReadyContent() {
+  const store = useAppStore((s) => s.store);
+  if (store === null) {
+    // initializeStore 後にのみ描画されるため通常到達しない。到達したら不整合なので
+    // 黙って空画面にせず明示的に失敗させる（ルートエラー境界が受ける）
+    throw new Error('ストアが未初期化のまま年表画面が描画されました');
+  }
+  return (
+    <div className={styles.shell}>
+      <Toolbar store={store} />
+      {/* 年表グリッド（TimelineGrid）は TASK-104。ここではシェルの器だけを用意する */}
+      <main className={styles.main} aria-label="年表グリッド" />
+    </div>
+  );
+}
+
+function ShellContent() {
   const [load, setLoad] = useState<LoadState>({ phase: 'loading' });
   // 再試行の連打時に古い応答が新しい応答を上書きしないための世代トークン
   const requestSeq = useRef(0);
@@ -80,12 +101,14 @@ function ShellContent({ storeRef }: { storeRef: RefObject<Store | null> }) {
         return;
       }
       if (next.phase === 'ready') {
-        // エラー境界の退避エクスポートが「メモリ上のデータ」へ到達するための参照
-        storeRef.current = next.store;
+        // データの正を appStore へ注入する（初期ロードなので自動保存はかからない）
+        useAppStore.getState().initializeStore(next.store);
+        setLoad({ phase: 'ready', rev: next.rev });
+        return;
       }
       setLoad(next);
     });
-  }, [storeRef]);
+  }, []);
 
   useEffect(() => {
     reload();
@@ -137,21 +160,20 @@ function ShellContent({ storeRef }: { storeRef: RefObject<Store | null> }) {
     );
   }
 
-  return (
-    <div className={styles.shell}>
-      <Toolbar store={load.store} />
-      {/* 年表グリッド（TimelineGrid）は TASK-104。ここではシェルの器だけを用意する */}
-      <main className={styles.main} aria-label="年表グリッド" />
-    </div>
-  );
+  return <ReadyContent />;
+}
+
+// エラー境界の退避エクスポートが「メモリ上のデータ」へ到達するための参照。
+// appStore がミューテーション反映済みの最新データを持つため、未保存の編集も退避できる。
+// 描画ツリーの state に依存しないよう Zustand の getState で直接読む（モジュールレベルで安定）
+function getStoreForRecovery(): Store | null {
+  return useAppStore.getState().store;
 }
 
 export function AppShell() {
-  const storeRef = useRef<Store | null>(null);
-  const getStore = useCallback(() => storeRef.current, []);
   return (
-    <RootErrorBoundary appVersion={__APP_VERSION__} getStore={getStore}>
-      <ShellContent storeRef={storeRef} />
+    <RootErrorBoundary appVersion={__APP_VERSION__} getStore={getStoreForRecovery}>
+      <ShellContent />
     </RootErrorBoundary>
   );
 }

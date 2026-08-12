@@ -98,11 +98,15 @@
     Playwright 機械確認で「年表1」表示と vite 単独起動時の接続エラー画面+再試行を確認。
     メモ: GET 409 時は事実表示のみの読み取り専用画面（リカバリ本実装は TASK-203）。
     アプリ版数は vite define __APP_VERSION__ で package.json から埋め込み
-- [ ] TASK-102: `store/appStore.ts` — Zustand ストアとミューテーション全12操作（addPerson/updatePerson・deletePerson〔deleteEvents/unlink の2ポリシー+personOrder除去〕・addEvent/updateEvent/deleteEvent・reorderPerson・setSortMode・addTimeline/renameTimeline/deleteTimeline/switchTimeline・setViewRange/setZoom・replaceStore・appendTimelines〔全id再採番+personId再マップ〕）+ 単体テスト
+- [x] TASK-102: `store/appStore.ts` — Zustand ストアとミューテーション全12操作（addPerson/updatePerson・deletePerson〔deleteEvents/unlink の2ポリシー+personOrder除去〕・addEvent/updateEvent/deleteEvent・reorderPerson・setSortMode・addTimeline/renameTimeline/deleteTimeline/switchTimeline・setViewRange/setZoom・replaceStore・appendTimelines〔全id再採番+personId再マップ〕）+ 単体テスト
   - 対応要件: US-001/003/008/009/011 / 対応設計: data-model.md 3章・4章
   - 完了条件: 各ミューテーションの Vitest（特に deletePerson 2ポリシー・appendTimelines の
     personId 再マップで E-STORE-EVENT-ORPHAN を作らない・最後の年表削除→「年表1」自動作成・
     manual時の新規人物は personOrder 末尾）が全パス
+  - 証拠 (2026-08-12): appStore.test.ts 41/41 pass（done契約4点を個別網羅・ほぼ全テストで
+    storeSchema.parse による整合性検証）・typecheck エラー0・npm test 251/251。
+    メモ: 全ミューテーションを mutate() 一点に集約（TASK-103 の自動保存差し込み口）。
+    manual 切替初回は現在の生年順を初期値化。表示中年表削除時は同位置の年表へ切替
 - [ ] TASK-103: 自動保存プロトコルと保存状態UI（全ミューテーション後の500msデバウンスPUT・pagehide時の keepalive フラッシュ・rev管理・「保存済み HH:mm:ss」表示・E-REV-CONFLICT 競合ダイアログ〔読み直し/上書き=GET→再PUT〕・ネットワークエラー/5xx の常設バナー+再試行+以後の変更で自動再試行）
   - 対応要件: US-009 / 対応設計: server-api.md 5章
   - 完了条件: fetch をモックした Vitest（デバウンス集約・rev更新・競合分岐・失敗時の
