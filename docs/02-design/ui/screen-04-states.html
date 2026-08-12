@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>ChronoLines モックアップ: 状態リファレンス（セル・チップ・バナー全状態）</title>
+<style>
+  :root {
+    --color-bg:#FFFFFF; --color-surface:#F9FAFB; --color-text:#1F2937; --color-text-muted:#6B7280;
+    --color-border:#E5E7EB; --color-border-strong:#9CA3AF;
+    --color-alive-bg:#DBEAFE; --color-alive-text:#1E40AF; --color-alive-band:#3B82F6;
+    --color-virtual-bg:#F3F4F6; --color-virtual-text:#4B5563; --color-virtual-band:#9CA3AF;
+    --color-chip-bg:#FDE68A; --color-chip-text:#713F12; --color-selcol-bg:#FEF3C7;
+    --color-row-hilite:#FEF08A; --color-current-year:#DC2626;
+    --color-primary:#2563EB; --color-danger:#DC2626; --color-error-bg:#FEE2E2;
+    --font-family:"Segoe UI","Yu Gothic UI",Meiryo,system-ui,sans-serif;
+    --cell-w:44px; --cell-h:28px; --radius:4px;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:var(--font-family); font-size:14px; color:var(--color-text); background:var(--color-bg); padding:16px 24px 48px; }
+  h1 { font-size:18px; margin:8px 0 4px; }
+  h2 { font-size:15px; margin:24px 0 8px; padding-top:12px; border-top:1px solid var(--color-border); }
+  p.desc { font-size:12px; color:var(--color-text-muted); margin-bottom:8px; }
+  table { border-collapse:collapse; font-size:13px; }
+  th, td { border:1px solid var(--color-border); padding:6px 10px; text-align:left; vertical-align:middle; }
+  th { background:var(--color-surface); font-size:12px; }
+  .cell { width:var(--cell-w); height:var(--cell-h); border:1px solid var(--color-border); font-size:12px; display:inline-flex; align-items:center; justify-content:center; position:relative; vertical-align:middle; }
+  .cell.alive { background:var(--color-alive-bg); color:var(--color-alive-text); font-weight:600; }
+  .cell.alive::after, .cell.virtual::after { content:""; position:absolute; left:0; right:0; bottom:0; height:3px; }
+  .cell.alive::after { background:var(--color-alive-band); }
+  .cell.virtual { background:var(--color-virtual-bg); color:var(--color-virtual-text); }
+  .cell.virtual::after { background:var(--color-virtual-band); }
+  .cell.selcol-blank { background:var(--color-selcol-bg); }
+  .cell.selcol { box-shadow:inset 2px 0 0 #F59E0B, inset -2px 0 0 #F59E0B; }
+  .cell.current::before { content:""; position:absolute; right:-1px; top:0; bottom:0; width:2px; background:var(--color-current-year); }
+  .cell.wide { width:72px; }
+  .cell.birth-marker::before { content:""; position:absolute; left:0; top:0; bottom:0; width:4px; background:var(--color-alive-band); }
+  .chip { background:var(--color-chip-bg); color:var(--color-chip-text); border-radius:3px; font-size:10px; padding:1px 4px; }
+  .more-badge { font-size:10px; color:var(--color-chip-text); background:#FCD34D; border-radius:3px; padding:1px 4px; }
+  .ev-badge { background:var(--color-chip-bg); color:var(--color-chip-text); border-radius:8px; font-size:11px; padding:1px 8px; }
+  .p-badge { background:var(--color-alive-bg); color:var(--color-alive-text); border-radius:8px; padding:0 8px; font-size:11px; }
+  .name-hit { display:inline-block; background:var(--color-row-hilite); padding:2px 8px; font-size:13px; }
+  .banner-demo { padding:8px 16px; font-size:13px; border:1px solid var(--color-border); margin-bottom:8px; max-width:720px; }
+  .banner-demo.error { background:var(--color-error-bg); color:#7F1D1D; }
+  .banner-demo.info { background:var(--color-selcol-bg); color:#78350F; }
+  .btn { padding:4px 12px; border-radius:var(--radius); border:1px solid var(--color-border-strong); background:#fff; cursor:default; font-size:13px; }
+  .btn.primary { background:var(--color-primary); border-color:var(--color-primary); color:#fff; }
+  .btn.danger { background:var(--color-danger); border-color:var(--color-danger); color:#fff; }
+  .save-ok { font-size:12px; color:var(--color-text-muted); }
+  code { background:var(--color-surface); border:1px solid var(--color-border); border-radius:3px; padding:0 4px; font-size:12px; }
+  .tag-pill { display:inline-flex; align-items:center; gap:5px; border-radius:999px; font-size:12px; padding:2px 10px; line-height:1.5; white-space:nowrap; }
+  .tag-pill .dot { width:8px; height:8px; border-radius:50%; flex:none; }
+  .tag-pill .x { opacity:.6; margin-left:2px; font-size:11px; }
+  .tagdots i { width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:3px; }
+</style>
+</head>
+<body>
+<h1>状態リファレンス</h1>
+<p class="desc">セル・チップ・バナー等の全状態を1枚に集約したリファレンス。視覚確認・実装・テストの視覚比較はこのファイルを正とする。配色の実測値は design-tokens.md を参照（全テキストペア WCAG AA 合格）。</p>
+
+<h2>1. セルの状態（1年ズーム、例: 徳川家康 1543–1616 / 現在年 2026）</h2>
+<table>
+  <tr><th>状態</th><th>表示例</th><th>規則</th></tr>
+  <tr><td>生前</td><td><span class="cell"></span></td><td>空欄・地の色（1500年など生年より前）</td></tr>
+  <tr><td>生年（境界）</td><td><span class="cell alive birth-marker">0</span></td><td>0歳・生存表示（1543年）</td></tr>
+  <tr><td>生存中</td><td><span class="cell alive">57</span></td><td>満年齢・青系トークン + 下端の生存帯（1600年）</td></tr>
+  <tr><td>没年（境界）</td><td><span class="cell alive">73</span></td><td>没年のセルは生存扱い（1616年）</td></tr>
+  <tr><td>没後 = 仮想年齢</td><td><span class="cell virtual">(157)</span></td><td>括弧書き + グレートークン + グレー帯（1700年）。色以外に括弧で識別</td></tr>
+  <tr><td>存命者の未来年</td><td><span class="cell virtual">(120)</span></td><td>没後と同じ仮想年齢表示（1980年生の2100年）</td></tr>
+  <tr><td>選択列（空欄セル）</td><td><span class="cell selcol selcol-blank"></span></td><td>選択列は空欄セルに黄色ティント + 左右のアンバー罫線</td></tr>
+  <tr><td>選択列（年齢セル）</td><td><span class="cell alive selcol">57</span></td><td>年齢セルは元の色を保ち左右罫線のみ</td></tr>
+  <tr><td>現在年の右罫線</td><td><span class="cell alive current">483</span></td><td>現在年の列の右端に赤罫線（2026年）</td></tr>
+</table>
+
+<h2>2. セルの状態（10年ズーム）</h2>
+<table>
+  <tr><th>状態</th><th>表示例</th><th>規則</th></tr>
+  <tr><td>生年を含む10年</td><td><span class="cell wide alive birth-marker">0</span></td><td>数値は開始年時点の年齢（10年の途中生まれは0）。左端に開始マーカー</td></tr>
+  <tr><td>生存の10年</td><td><span class="cell wide alive">57</span></td><td>開始年（例: 1600）時点の満年齢</td></tr>
+  <tr><td>没後の10年</td><td><span class="cell wide virtual">(87)</span></td><td>10年間すべて没後のとき仮想表示</td></tr>
+</table>
+
+<h2>3. イベント表示の状態</h2>
+<table>
+  <tr><th>状態</th><th>表示例</th><th>規則</th></tr>
+  <tr><td>通常イベント</td><td><span class="chip">関ヶ原の戦い</span></td><td>チップ表示（1列あたり最大2件）</td></tr>
+  <tr><td>個人イベント</td><td><span class="chip">👤徳川家康死去</span></td><td>人物アイコン付き。パネルでは <span class="p-badge">👤 徳川家康</span> バッジ</td></tr>
+  <tr><td>3件以上（要約）</td><td><span class="chip">大坂夏の陣</span> <span class="chip">武家諸法度制定</span> <span class="more-badge">+1</span></td><td>「+N」バッジ。クリックでパネルに全件（1年100件の保証範囲までスクロール表示）</td></tr>
+  <tr><td>10年ズームの集約</td><td><span class="ev-badge">4件</span></td><td>件数バッジのみ。クリックで年別グループ表示</td></tr>
+</table>
+
+<h2>4. 検索・絞り込みの状態</h2>
+<table>
+  <tr><th>状態</th><th>表示例</th><th>規則</th></tr>
+  <tr><td>検索ヒット行</td><td><span class="name-hit">伊達政宗 <span style="font-size:11px;color:var(--color-text-muted)">1567–1636</span></span></td><td>人物列を黄色で強調 + ヒット行へスクロール。「k/n件」表示</td></tr>
+  <tr><td>検索該当なし</td><td><span style="font-size:12px;color:var(--color-danger)">該当なし</span></td><td>入力欄の下に表示。表示は変化させない</td></tr>
+  <tr><td>タグ絞り込み中</td><td><span id="demo-filter-pills"></span></td><td>複数選択（OR条件）。選択中はツールバーに色付きピル表示、各✕で個別解除。人物行とイベントの両方に適用（タグを持たないものは非表示）</td></tr>
+</table>
+
+<h2>4.5. タグの状態（8色パレット。色はタグ名のハッシュで決定的に割り当て・識別の主チャネルはラベル文字）</h2>
+<p class="desc">文字/背景コントラストは全8色 WCAG AA 合格（実測値は design-tokens.md）。同名タグはアプリ全体で常に同色。</p>
+<table>
+  <tr><th>状態</th><th>表示例</th><th>規則</th></tr>
+  <tr><td>パレット8色</td><td><span id="demo-tag-palette"></span></td><td>blue / green / amber / purple / pink / teal / red / gray</td></tr>
+  <tr><td>付与済み（フォーム内）</td><td><span id="demo-tag-assigned"></span></td><td>✕で除去。フォームでは「登録済みから選択」+「新規作成」の2動線（screen-03）</td></tr>
+  <tr><td>人物行のタグドット</td><td><span class="tagdots" id="demo-tag-dots"></span> <span style="font-size:13px">徳川家康</span></td><td>人物列にはドットのみ表示（行高28pxのため）。ホバーでタグ名をツールチップ表示</td></tr>
+  <tr><td>タグ付きイベントチップ</td><td><span id="demo-tag-chip"></span></td><td>イベントチップは先頭タグの配色を使う（タグなしは既定のアンバー）</td></tr>
+</table>
+<script>
+const TAG_COLORS = [
+  { n:"blue", bg:"#DBEAFE", fg:"#1E40AF", dot:"#3B82F6" }, { n:"green", bg:"#DCFCE7", fg:"#166534", dot:"#22C55E" },
+  { n:"amber", bg:"#FEF3C7", fg:"#92400E", dot:"#F59E0B" }, { n:"purple", bg:"#F3E8FF", fg:"#6B21A8", dot:"#A855F7" },
+  { n:"pink", bg:"#FCE7F3", fg:"#9D174D", dot:"#EC4899" }, { n:"teal", bg:"#CCFBF1", fg:"#115E59", dot:"#14B8A6" },
+  { n:"red", bg:"#FEE2E2", fg:"#991B1B", dot:"#EF4444" }, { n:"gray", bg:"#E5E7EB", fg:"#374151", dot:"#6B7280" },
+];
+const tagColor = name => TAG_COLORS[[...name].reduce((s,c)=>s+c.codePointAt(0),0) % 8];
+const pill = (t, x, c = tagColor(t)) =>
+  `<span class="tag-pill" style="background:${c.bg};color:${c.fg}"><span class="dot" style="background:${c.dot}"></span>${t}${x?'<span class="x">✕</span>':''}</span>`;
+document.getElementById("demo-tag-palette").innerHTML = TAG_COLORS.map(c => pill(c.n, false, c)).join(" ");
+document.getElementById("demo-filter-pills").innerHTML = pill("合戦", true) + " " + pill("天下人", true);
+document.getElementById("demo-tag-assigned").innerHTML = pill("戦国", true) + " " + pill("天下人", true);
+document.getElementById("demo-tag-dots").innerHTML = ["戦国","天下人"].map(t=>`<i style="background:${tagColor(t).dot}" title="${t}"></i>`).join("");
+const ec = tagColor("合戦");
+document.getElementById("demo-tag-chip").innerHTML = `<span class="chip" style="background:${ec.bg};color:${ec.fg}">関ヶ原の戦い</span>`;
+</script>
+
+<h2>5. バナー・保存状態</h2>
+<div class="banner-demo error">保存できていません（最終保存: 14:03:22）。編集内容はこの画面に保持されています。 <span class="btn">再試行</span></div>
+<div class="banner-demo info">指定した範囲（1200〜1300）に該当する人物・イベントはありません。範囲を変更してください。</div>
+<p><span class="save-ok">保存済み 14:03:22</span> ← 通常時（ツールバー右端） / <span class="save-ok" style="color:var(--color-danger)">未保存の変更あり</span> ← 保存失敗時</p>
+
+<h2>6. ボタン</h2>
+<p><span class="btn primary">＋人物</span> <span class="btn">キャンセル</span> <span class="btn danger">削除する</span></p>
+
+<h2>7. 年の表記（境界値）</h2>
+<table>
+  <tr><th>データ上の値</th><th>表示</th><th>備考</th></tr>
+  <tr><td><code>1600</code></td><td>1600</td><td>西暦はそのまま</td></tr>
+  <tr><td><code>-100</code></td><td>前100</td><td>紀元前は「前N」形式（US-005）</td></tr>
+  <tr><td><code>-1</code></td><td>前1</td><td>前1年の翌年は西暦1年（0年は存在しない）</td></tr>
+  <tr><td><code>0</code></td><td>—</td><td>入力・データとも拒否（エラー: 「0年は存在しません」）</td></tr>
+  <tr><td>入力「前100」「-100」「１６００」</td><td>受理して正規化</td><td>全角数字・前後空白も受理（A-006）</td></tr>
+</table>
+</body>
+</html>

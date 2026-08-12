@@ -1,6 +1,6 @@
 <!-- GATE_STATUS
 requirements: done
-design: not_started
+design: done
 implementation: not_started
 test: not_started
 release: not_started
@@ -17,7 +17,7 @@ release: not_started
 | フェーズ | 状態 | ゲート承認日 | 備考 |
 |---|---|---|---|
 | 要件定義 | 完了 | 2026-08-12 | 成果物4点＋spec-criticレビュー（MAJOR6件対応済み）。ユーザー承認済み |
-| 設計 | 未着手 | - | |
+| 設計 | 完了 | 2026-08-12 | architecture.md・ADR4本・詳細設計5本・モックアップ4枚+トークン・stack-conventionsスキル。spec-criticレビュー（MAJOR2件対応済み）。タグ拡張差分（イベントへの付与・複数選択絞り込み）承認込み。モックアップ確認済み（A-004確定） |
 | 実装 | 未着手 | - | |
 | テスト | 未着手 | - | |
 | リリース | 未着手 | - | |

@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>ChronoLines モックアップ: 10年ズーム（集約表現の確認・A-004）</title>
+<style>
+  :root {
+    --color-bg:#FFFFFF; --color-surface:#F9FAFB; --color-text:#1F2937; --color-text-muted:#6B7280;
+    --color-border:#E5E7EB; --color-border-strong:#9CA3AF;
+    --color-alive-bg:#DBEAFE; --color-alive-text:#1E40AF; --color-alive-band:#3B82F6;
+    --color-virtual-bg:#F3F4F6; --color-virtual-text:#4B5563; --color-virtual-band:#9CA3AF;
+    --color-chip-bg:#FDE68A; --color-chip-text:#713F12; --color-selcol-bg:#FEF3C7;
+    --color-primary:#2563EB;
+    --font-family:"Segoe UI","Yu Gothic UI",Meiryo,system-ui,sans-serif;
+    --cell-w:72px; --cell-h:28px; --name-col-w:200px; --radius:4px;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:var(--font-family); font-size:14px; color:var(--color-text); background:var(--color-bg); }
+  .mock-bar { background:#111827; color:#9CA3AF; padding:8px 12px; font-size:12px; }
+  .toolbar { display:flex; align-items:center; gap:8px; padding:8px 12px; background:var(--color-surface); border-bottom:1px solid var(--color-border); }
+  .zoom-toggle { display:flex; border:1px solid var(--color-border-strong); border-radius:var(--radius); overflow:hidden; }
+  .zoom-toggle button { border:0; padding:6px 12px; background:#fff; cursor:pointer; font-size:13px; }
+  .zoom-toggle button.on { background:var(--color-primary); color:#fff; }
+  .note { font-size:12px; color:var(--color-text-muted); }
+  .grid-scroll { overflow:auto; }
+  .grid { display:inline-block; }
+  .grid-row { display:flex; height:var(--cell-h); }
+  .grid-row.year-header { height:32px; }
+  .grid-row.event-lane { height:28px; border-bottom:2px solid var(--color-border-strong); }
+  .name-cell { width:var(--name-col-w); min-width:var(--name-col-w); background:var(--color-surface); border-right:2px solid var(--color-border-strong); border-bottom:1px solid var(--color-border); padding:0 8px; display:flex; align-items:center; gap:6px; }
+  .name-cell .nm { font-weight:600; font-size:13px; }
+  .name-cell .yrs { font-size:11px; color:var(--color-text-muted); }
+  .cell { width:var(--cell-w); min-width:var(--cell-w); border-right:1px solid var(--color-border); border-bottom:1px solid var(--color-border); font-size:12px; display:flex; align-items:center; justify-content:center; position:relative; }
+  .cell.alive { background:var(--color-alive-bg); color:var(--color-alive-text); font-weight:600; }
+  .cell.alive::after, .cell.virtual::after { content:""; position:absolute; left:0; right:0; bottom:0; height:3px; }
+  .cell.alive::after { background:var(--color-alive-band); }
+  .cell.virtual { background:var(--color-virtual-bg); color:var(--color-virtual-text); }
+  .cell.virtual::after { background:var(--color-virtual-band); }
+  .cell.birth-marker::before { content:""; position:absolute; left:0; top:0; bottom:0; width:4px; background:var(--color-alive-band); }
+  .cell.death-marker { }
+  .cell.death-marker .dm { position:absolute; right:0; top:0; bottom:0; width:4px; background:var(--color-alive-band); }
+  .yh { font-size:11px; color:var(--color-text-muted); align-items:flex-end; padding-bottom:4px; border-bottom:0; }
+  .ev-col { width:var(--cell-w); min-width:var(--cell-w); border-right:1px solid var(--color-border); display:flex; align-items:center; justify-content:center; cursor:pointer; }
+  .ev-badge { background:var(--color-chip-bg); color:var(--color-chip-text); border-radius:8px; font-size:11px; padding:1px 8px; }
+  .legend { padding:12px 16px; font-size:13px; color:var(--color-text); border-top:1px solid var(--color-border); line-height:2; }
+  .legend .sw { display:inline-block; width:36px; height:18px; vertical-align:middle; margin-right:4px; border:1px solid var(--color-border); position:relative; }
+  .bc-demo { padding:12px 16px; border-top:1px solid var(--color-border); }
+  .bc-demo h2 { font-size:14px; margin-bottom:8px; }
+</style>
+</head>
+<body>
+
+<div class="mock-bar">【モックアップ】10年ズームの集約表現（未確定事項 A-004 の確認用）。1年ズームは screen-01 を参照。</div>
+
+<div class="toolbar">
+  <select><option>戦国</option></select>
+  <div class="zoom-toggle"><button title="screen-01参照">1年</button><button class="on">10年</button></div>
+  <span class="note">切り替え時は、切替前の表示中心の年が切替後も中心に来るようスクロール位置を再計算します（US-007）</span>
+</div>
+
+<div class="grid-scroll"><div class="grid" id="grid"></div></div>
+
+<div class="legend">
+  <strong>10年セルの表示規則:</strong>
+  数値 = <u>その10年の開始年時点の年齢</u>（10年の途中で生まれた場合は 0）。
+  <span class="sw" style="background:var(--color-alive-bg);border-bottom:3px solid var(--color-alive-band)"></span>生存の帯
+  <span class="sw" style="background:var(--color-virtual-bg);border-bottom:3px solid var(--color-virtual-band)"></span>仮想年齢（括弧書き）
+  セル左端の縦線 = この10年に生年、右端の縦線 = この10年に没年。
+  イベントは10年単位の件数バッジ（クリックで年別の全件をサイドパネルに表示）。
+</div>
+
+<div class="bc-demo">
+  <h2>紀元前の10年列の見出し（参考: 動作保証範囲は前1000年まで）</h2>
+  <div class="grid-row year-header" style="display:inline-flex">
+    <div class="cell yh">前1000〜</div><div class="cell yh">前990〜</div><div class="cell yh">前980〜</div>
+    <div class="cell yh">…</div><div class="cell yh">前20〜</div><div class="cell yh">前10〜</div>
+    <div class="cell yh">1〜</div><div class="cell yh">10〜</div>
+  </div>
+  <div style="font-size:12px;color:var(--color-text-muted);margin-top:4px">
+    10年の区切りは年ラベルに整列させる: 紀元前は「前1000〜前991」…「前10〜前1」、
+    紀元0年は存在しないため「前10〜」の次の「1〜」だけが西暦1〜9の9年バケットになり、以降は「10〜19」…。
+  </div>
+</div>
+
+<script>
+const persons = [
+  { name:"武田信玄", birth:1521, death:1573 },
+  { name:"明智光秀", birth:1528, death:1582 },
+  { name:"上杉謙信", birth:1530, death:1578 },
+  { name:"織田信長", birth:1534, death:1582 },
+  { name:"豊臣秀吉", birth:1537, death:1598 },
+  { name:"徳川家康", birth:1543, death:1616 },
+  { name:"石田三成", birth:1560, death:1600 },
+  { name:"伊達政宗", birth:1567, death:1636 },
+  { name:"真田幸村", birth:1567, death:1615 },
+  { name:"宮本武蔵", birth:1584, death:1645 },
+];
+const eventCounts = { 1570:2, 1580:3, 1590:1, 1600:4, 1610:5, 1630:1, 1640:1 };
+const DECADES = []; for (let d = 1520; d <= 1650; d += 10) DECADES.push(d);
+
+function decadeCell(p, d) {
+  const dEnd = d + 9;
+  if (dEnd < p.birth) return { kind:"blank" };
+  const aliveAtStart = d >= p.birth && (!p.death || d <= p.death);
+  const bornInDecade = p.birth >= d && p.birth <= dEnd;
+  const diedInDecade = p.death && p.death >= d && p.death <= dEnd;
+  const allAfterDeath = p.death && d > p.death;
+  if (allAfterDeath) return { kind:"virtual", age:d - p.birth };
+  const age = bornInDecade ? 0 : d - p.birth;
+  return { kind:"alive", age, bornInDecade, diedInDecade };
+}
+let h = '<div class="grid-row year-header"><div class="name-cell"><span class="nm">人物</span></div>';
+for (const d of DECADES) h += `<div class="cell yh">${d}〜</div>`;
+h += '</div><div class="grid-row event-lane"><div class="name-cell"><span class="yrs">イベント</span></div>';
+for (const d of DECADES) h += `<div class="ev-col">${eventCounts[d] ? `<span class="ev-badge">${eventCounts[d]}件</span>` : ''}</div>`;
+h += '</div>';
+for (const p of persons) {
+  h += `<div class="grid-row"><div class="name-cell"><span class="nm">${p.name}</span><span class="yrs">${p.birth}–${p.death}</span></div>`;
+  for (const d of DECADES) {
+    const c = decadeCell(p, d);
+    if (c.kind === "blank") { h += '<div class="cell"></div>'; continue; }
+    const cls = ['cell', c.kind, c.bornInDecade?'birth-marker':'', c.diedInDecade?'death-marker':''].join(' ');
+    const txt = c.kind === 'virtual' ? `(${c.age})` : c.age;
+    h += `<div class="${cls}">${txt}${c.diedInDecade?'<span class="dm"></span>':''}</div>`;
+  }
+  h += '</div>';
+}
+document.getElementById("grid").innerHTML = h;
+</script>
+</body>
+</html>

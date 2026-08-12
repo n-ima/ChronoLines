@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>ChronoLines モックアップ: フォーム・ダイアログ・リカバリ画面</title>
+<style>
+  :root {
+    --color-bg:#FFFFFF; --color-surface:#F9FAFB; --color-text:#1F2937; --color-text-muted:#6B7280;
+    --color-border:#E5E7EB; --color-border-strong:#9CA3AF;
+    --color-alive-bg:#DBEAFE; --color-alive-text:#1E40AF;
+    --color-chip-bg:#FDE68A; --color-chip-text:#713F12;
+    --color-primary:#2563EB; --color-danger:#DC2626; --color-error-bg:#FEE2E2; --color-selcol-bg:#FEF3C7;
+    --font-family:"Segoe UI","Yu Gothic UI",Meiryo,system-ui,sans-serif;
+    --radius:4px; --radius-lg:8px;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:var(--font-family); font-size:14px; color:var(--color-text); background:var(--color-bg); }
+  .mock-bar { background:#111827; color:#fff; padding:8px 12px; display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .mock-bar span { font-size:12px; color:#9CA3AF; }
+  .mock-bar button { font-size:12px; padding:4px 10px; border-radius:var(--radius); border:1px solid #4B5563; background:#1F2937; color:#E5E7EB; cursor:pointer; }
+  .toolbar { display:flex; align-items:center; gap:8px; padding:8px 12px; background:var(--color-surface); border-bottom:1px solid var(--color-border); }
+  .btn { padding:6px 12px; border-radius:var(--radius); border:1px solid var(--color-border-strong); background:#fff; cursor:pointer; font-size:13px; color:var(--color-text); }
+  .btn.primary { background:var(--color-primary); border-color:var(--color-primary); color:#fff; }
+  .btn.danger { background:var(--color-danger); border-color:var(--color-danger); color:#fff; }
+  .hint { padding:16px; color:var(--color-text-muted); font-size:13px; line-height:1.8; }
+
+  .overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:10; align-items:flex-start; justify-content:center; padding-top:8vh; }
+  .overlay.open { display:flex; }
+  .dialog { background:#fff; border-radius:var(--radius-lg); width:480px; max-width:92vw; max-height:80vh; overflow:auto; box-shadow:0 8px 30px rgba(0,0,0,.2); }
+  .dlg-head { display:flex; justify-content:space-between; align-items:center; padding:14px 16px; border-bottom:1px solid var(--color-border); }
+  .dlg-head h2 { font-size:16px; }
+  .dlg-close { border:0; background:none; font-size:16px; cursor:pointer; color:var(--color-text-muted); }
+  .dlg-body { padding:16px; }
+  .dlg-foot { display:flex; justify-content:flex-end; gap:8px; padding:12px 16px; border-top:1px solid var(--color-border); }
+  .dlg-foot .left { margin-right:auto; }
+  .field { margin-bottom:12px; }
+  .field label { display:block; font-size:13px; font-weight:600; margin-bottom:4px; }
+  .field label .req { color:var(--color-danger); }
+  .field input[type=text], .field select, .field textarea { width:100%; padding:6px 8px; border:1px solid var(--color-border-strong); border-radius:var(--radius); font-size:13px; font-family:inherit; }
+  .field .sub { font-size:12px; color:var(--color-text-muted); margin-top:2px; }
+  .field .err { display:none; font-size:12px; color:var(--color-danger); margin-top:2px; }
+  .show-errors .field.has-err input, .show-errors .field.has-err { }
+  .show-errors .field.has-err .err { display:block; }
+  .show-errors .field.has-err input { border-color:var(--color-danger); }
+  .row2 { display:flex; gap:8px; } .row2 > div { flex:1; }
+  /* タグピッカー（人物・イベント共通部品。design-tokens.md のタグ配色） */
+  .tag-pill { display:inline-flex; align-items:center; gap:5px; border-radius:999px; font-size:12px; padding:2px 10px; line-height:1.5; white-space:nowrap; cursor:pointer; }
+  .tag-pill .dot { width:8px; height:8px; border-radius:50%; flex:none; }
+  .tag-pill .x { opacity:.6; margin-left:2px; font-size:11px; }
+  .tag-pill:hover .x { opacity:1; }
+  .tag-pill.addable { opacity:.85; border:1px dashed transparent; }
+  .tag-pill.addable:hover { opacity:1; box-shadow:0 0 0 1px currentColor inset; }
+  .tag-picker { border:1px solid var(--color-border-strong); border-radius:var(--radius); padding:8px; }
+  .tag-picker .assigned { display:flex; gap:6px; flex-wrap:wrap; min-height:26px; }
+  .tag-picker .assigned .none { font-size:12px; color:var(--color-text-muted); }
+  .tag-picker .avail-label { font-size:11px; color:var(--color-text-muted); margin:8px 0 4px; }
+  .tag-picker .avail { display:flex; gap:6px; flex-wrap:wrap; }
+  .tag-picker .newtag { display:flex; gap:6px; margin-top:8px; align-items:center; }
+  .tag-picker .newtag input { flex:1; padding:4px 8px; border:1px solid var(--color-border-strong); border-radius:var(--radius); font-size:12px; }
+  .tag-picker .newtag .sub { font-size:11px; color:var(--color-text-muted); }
+  .tl-row { display:flex; align-items:center; gap:8px; padding:8px; border:1px solid var(--color-border); border-radius:var(--radius); margin-bottom:8px; }
+  .tl-row .meta { color:var(--color-text-muted); font-size:12px; }
+  .tl-row .grow { flex:1; }
+  .tabs { display:flex; border-bottom:1px solid var(--color-border); margin-bottom:12px; }
+  .tabs button { border:0; background:none; padding:8px 16px; cursor:pointer; font-size:14px; color:var(--color-text-muted); border-bottom:2px solid transparent; }
+  .tabs button.on { color:var(--color-primary); border-bottom-color:var(--color-primary); font-weight:600; }
+  .radio-row { margin:8px 0; font-size:14px; }
+  .preview-box { background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius); padding:10px; font-size:13px; margin:8px 0; }
+  .warn { background:var(--color-error-bg); color:#7F1D1D; border-radius:var(--radius); padding:8px 10px; font-size:13px; margin-top:8px; }
+  details { margin-top:8px; font-size:12px; color:var(--color-text-muted); }
+  .recovery { display:none; position:fixed; inset:0; background:var(--color-surface); z-index:20; align-items:center; justify-content:center; }
+  .recovery.open { display:flex; }
+  .rec-card { background:#fff; border:1px solid var(--color-border); border-radius:var(--radius-lg); padding:24px; width:560px; max-width:92vw; box-shadow:0 8px 30px rgba(0,0,0,.15); }
+  .rec-card h1 { font-size:18px; margin-bottom:8px; }
+  .rec-card p { font-size:13px; line-height:1.7; margin-bottom:8px; }
+  .rec-card ol { margin:8px 0 8px 20px; font-size:13px; line-height:2; }
+  .rec-card code { background:var(--color-surface); border:1px solid var(--color-border); border-radius:3px; padding:0 4px; font-size:12px; }
+  .rec-actions { display:flex; gap:8px; margin-top:16px; }
+</style>
+</head>
+<body>
+
+<div class="mock-bar">
+  <span>【モックアップ】ボタンから実動線で各ダイアログが開きます。エラー表示の確認 →</span>
+  <button onclick="toggleErrors()">検証エラー表示 ON/OFF</button>
+  <span>リカバリ画面 →</span>
+  <button onclick="openRecovery('corrupt')">データ破損時</button>
+  <button onclick="openRecovery('newer')">新しい形式のデータ</button>
+</div>
+
+<div class="toolbar">
+  <select onchange="if(this.value==='manage'){openDlg('dlg-timelines');this.value='sengoku'}">
+    <option value="sengoku">戦国</option><option value="bakumatsu">幕末</option><option value="manage">年表の管理...</option>
+  </select>
+  <button class="btn primary" onclick="openDlg('dlg-person')">＋人物</button>
+  <button class="btn" onclick="openDlg('dlg-event')">＋イベント</button>
+  <button class="btn" onclick="openDlg('dlg-io')">入出力</button>
+</div>
+<div class="hint">
+  ツールバーの各ボタン・年表ドロップダウンの「年表の管理...」から、実際の動線でダイアログを開いて確認してください。<br>
+  人物の削除確認は「年表の管理」ではなく人物行のメニューから開きますが、このモックアップでは → <button class="btn" onclick="openDlg('dlg-delete')">削除確認を開く</button><br>
+  すべてのダイアログは Esc・✕・キャンセルで閉じます。
+</div>
+
+<!-- 人物フォーム (US-001) -->
+<div class="overlay" id="dlg-person"><div class="dialog">
+  <div class="dlg-head"><h2>人物の追加</h2><button class="dlg-close" onclick="closeDlg()">✕</button></div>
+  <div class="dlg-body" id="person-form">
+    <div class="field"><label>名前 <span class="req">*</span></label><input type="text" value="徳川家康"></div>
+    <div class="field has-err"><label>生年 <span class="req">*</span></label><input type="text" placeholder="例: 1543、前100、-100" value="0">
+      <div class="sub">年のみでも登録できます（月日は参考情報）</div>
+      <div class="err">0年は存在しません（前1年の翌年は西暦1年です）</div></div>
+    <div class="row2">
+      <div class="field"><label>生月</label><select><option>—</option><option>1</option><option>12</option></select></div>
+      <div class="field"><label>生日</label><select disabled><option>—</option></select><div class="sub">月を選ぶと指定できます</div></div>
+    </div>
+    <div class="field has-err"><label>没年</label><input type="text" value="1550" placeholder="空欄 = 存命">
+      <div class="err">没年は生年以降にしてください</div></div>
+    <div class="row2">
+      <div class="field"><label>没月</label><select><option>—</option></select></div>
+      <div class="field"><label>没日</label><select disabled><option>—</option></select></div>
+    </div>
+    <div class="field"><label>タグ（複数可）</label><div class="tag-picker" id="tp-person"></div></div>
+  </div>
+  <div class="dlg-foot">
+    <button class="btn danger left" onclick="openDlg('dlg-delete')">削除...</button>
+    <button class="btn" onclick="closeDlg()">キャンセル</button><button class="btn primary">保存</button>
+  </div>
+</div></div>
+
+<!-- 人物削除の確認 (US-001: 紐付くイベントの扱い) -->
+<div class="overlay" id="dlg-delete"><div class="dialog">
+  <div class="dlg-head"><h2>人物の削除</h2><button class="dlg-close" onclick="closeDlg()">✕</button></div>
+  <div class="dlg-body">
+    <p style="font-size:14px">「徳川家康」を削除します。この人物に紐付くイベントが <strong>2件</strong> あります:</p>
+    <div class="preview-box">👤 徳川家康死去（1616年）<br>👤 江戸幕府開府の宣下（1603年）</div>
+    <p style="font-size:13px;color:var(--color-text-muted)">紐付くイベントの扱いを選んでください。</p>
+  </div>
+  <div class="dlg-foot">
+    <button class="btn" onclick="closeDlg()">キャンセル</button>
+    <button class="btn" onclick="closeDlg()">紐付けを解除してイベントは残す</button>
+    <button class="btn danger" onclick="closeDlg()">イベントも削除する</button>
+  </div>
+</div></div>
+
+<!-- イベントフォーム (US-003) -->
+<div class="overlay" id="dlg-event"><div class="dialog">
+  <div class="dlg-head"><h2>イベントの追加</h2><button class="dlg-close" onclick="closeDlg()">✕</button></div>
+  <div class="dlg-body">
+    <div class="field"><label>イベント名 <span class="req">*</span></label><input type="text" value="関ヶ原の戦い"></div>
+    <div class="field has-err"><label>年 <span class="req">*</span></label><input type="text" placeholder="例: 1600、前100、-100" value="">
+      <div class="err">年の形式が正しくありません（例: 1600、前100、-100）</div></div>
+    <div class="row2">
+      <div class="field"><label>月</label><select><option>—</option><option>9</option></select></div>
+      <div class="field"><label>日</label><select><option>—</option><option>15</option></select></div>
+    </div>
+    <div class="field"><label>メモ</label><textarea rows="3">天下分け目の合戦。東軍勝利。</textarea></div>
+    <div class="field"><label>人物への紐付け（任意）</label>
+      <select><option>なし（世の中の出来事）</option><option>徳川家康</option><option>伊達政宗</option></select>
+      <div class="sub">紐付けると「個人イベント」として人物名バッジ付きで表示されます</div></div>
+    <div class="field"><label>タグ（複数可）</label><div class="tag-picker" id="tp-event"></div></div>
+  </div>
+  <div class="dlg-foot"><button class="btn" onclick="closeDlg()">キャンセル</button><button class="btn primary">保存</button></div>
+</div></div>
+
+<!-- 年表管理 (US-009) -->
+<div class="overlay" id="dlg-timelines"><div class="dialog">
+  <div class="dlg-head"><h2>年表の管理</h2><button class="dlg-close" onclick="closeDlg()">✕</button></div>
+  <div class="dlg-body">
+    <div class="tl-row"><strong>戦国</strong><span class="meta">人物10人・イベント9件（表示中）</span><span class="grow"></span>
+      <button class="btn">名前変更</button><button class="btn danger" onclick="openDlg('dlg-tl-delete')">削除</button></div>
+    <div class="tl-row"><strong>幕末</strong><span class="meta">人物24人・イベント41件</span><span class="grow"></span>
+      <button class="btn">切替</button><button class="btn">名前変更</button><button class="btn danger" onclick="openDlg('dlg-tl-delete')">削除</button></div>
+    <div class="field" style="margin-top:16px"><label>新しい年表</label>
+      <div class="row2"><div><input type="text" placeholder="年表名（例: 三国志）"></div><div style="flex:0"><button class="btn primary">＋作成</button></div></div></div>
+  </div>
+  <div class="dlg-foot"><button class="btn" onclick="closeDlg()">閉じる</button></div>
+</div></div>
+
+<!-- 年表削除の確認 -->
+<div class="overlay" id="dlg-tl-delete"><div class="dialog">
+  <div class="dlg-head"><h2>年表の削除</h2><button class="dlg-close" onclick="closeDlg()">✕</button></div>
+  <div class="dlg-body">
+    <p>年表「戦国」を削除しますか？</p>
+    <div class="warn">人物10人・イベント9件もすべて削除されます。この操作は取り消せません。必要ならエクスポートでバックアップしてから削除してください。</div>
+  </div>
+  <div class="dlg-foot"><button class="btn" onclick="closeDlg()">キャンセル</button><button class="btn danger" onclick="closeDlg()">削除する</button></div>
+</div></div>
+
+<!-- 入出力 (US-011) -->
+<div class="overlay" id="dlg-io"><div class="dialog">
+  <div class="dlg-head"><h2>エクスポート / インポート</h2><button class="dlg-close" onclick="closeDlg()">✕</button></div>
+  <div class="dlg-body">
+    <div class="tabs"><button class="on" onclick="ioTab(this,'io-export')">エクスポート</button><button onclick="ioTab(this,'io-import')">インポート</button></div>
+    <div id="io-export">
+      <div class="radio-row"><label><input type="radio" name="scope" checked> 現在の年表のみ（戦国）</label></div>
+      <div class="radio-row"><label><input type="radio" name="scope"> すべての年表（2個）</label></div>
+      <p style="font-size:12px;color:var(--color-text-muted);margin:8px 0">JSONファイルとしてダウンロードします。バックアップはこのファイルを保管してください（復旧はインポートで行います）。</p>
+      <button class="btn primary">JSONをダウンロード</button>
+    </div>
+    <div id="io-import" style="display:none">
+      <div class="field"><input type="file" accept=".json"></div>
+      <div class="preview-box">✔ chronolines-export-20260810-2130.json<br>年表2個・人物150人・イベント420件（エクスポート日時: 2026-08-10 21:30）</div>
+      <div class="radio-row"><label><input type="radio" name="imode" checked> すべて置き換える（現在のデータは失われます）</label></div>
+      <div class="radio-row"><label><input type="radio" name="imode"> 年表として追加する</label></div>
+      <div class="warn" id="import-err" style="display:none">このファイルは取り込めません（形式が正しくありません）。既存のデータは変更されていません。<details><summary>詳細</summary>timelines[0].persons[3].birth.year: 0年は存在しません</details></div>
+      <div style="margin-top:8px"><button class="btn" onclick="document.getElementById('import-err').style.display='block'">（モック）不正ファイルのエラーを表示</button></div>
+    </div>
+  </div>
+  <div class="dlg-foot"><button class="btn" onclick="closeDlg()">閉じる</button><button class="btn primary">取り込む</button></div>
+</div></div>
+
+<!-- リカバリ画面: 破損 (US-010) -->
+<div class="recovery" id="rec-corrupt"><div class="rec-card">
+  <h1>⚠ 保存データを読み込めませんでした</h1>
+  <p>データファイルの解析に失敗しました。<strong>既存のファイルは変更していません。</strong></p>
+  <p><code>C:\Users\nimao\AppData\Local\ChronoLines\chronolines.json</code></p>
+  <details><summary>技術的な詳細</summary>JSON parse error: Unexpected end of input (position 182034)</details>
+  <p style="margin-top:12px">次のいずれかで復旧できます:</p>
+  <ol>
+    <li><strong>JSONファイルから復旧</strong> — エクスポート済みのバックアップを取り込みます（下のボタン）</li>
+    <li><strong>自動バックアップから手動復旧</strong> — <code>chronolines.json.bak</code> を <code>chronolines.json</code> に上書きコピーし、サーバーを再起動してから「再試行」</li>
+    <li><strong>空のデータで開始</strong> — 読めなかったファイルは <code>chronolines.corrupt-日時.json</code> として保全されます</li>
+  </ol>
+  <div class="rec-actions">
+    <button class="btn primary">JSONファイルから復旧...</button>
+    <button class="btn">空のデータで開始...</button>
+    <button class="btn">再試行</button>
+    <button class="btn" onclick="closeRecovery()" style="margin-left:auto">（モックを閉じる）</button>
+  </div>
+</div></div>
+
+<!-- リカバリ画面: 新しい形式 (US-010) -->
+<div class="recovery" id="rec-newer"><div class="rec-card">
+  <h1>⚠ より新しいバージョンのデータです</h1>
+  <p>このデータは新しいバージョンの ChronoLines（データ形式 v2）で保存されています。現在のアプリ（データ形式 v1）では開けません。</p>
+  <p><code>C:\Users\nimao\AppData\Local\ChronoLines\chronolines.json</code></p>
+  <p><strong>データを守るため、このままでは一切書き込みを行いません。</strong>アプリを新しいバージョンに更新してから開いてください。</p>
+  <div class="rec-actions">
+    <button class="btn">再試行</button>
+    <button class="btn" onclick="closeRecovery()" style="margin-left:auto">（モックを閉じる）</button>
+  </div>
+</div></div>
+
+<script>
+function openDlg(id) { document.querySelectorAll(".overlay").forEach(o=>o.classList.remove("open")); document.getElementById(id).classList.add("open"); }
+function closeDlg() { document.querySelectorAll(".overlay").forEach(o=>o.classList.remove("open")); }
+function openRecovery(kind) { closeRecovery(); document.getElementById(kind==='corrupt'?'rec-corrupt':'rec-newer').classList.add("open"); }
+function closeRecovery() { document.querySelectorAll(".recovery").forEach(o=>o.classList.remove("open")); }
+document.addEventListener("keydown", e => { if (e.key === "Escape") { closeDlg(); closeRecovery(); } });
+document.querySelectorAll(".overlay").forEach(o => o.addEventListener("click", e => { if (e.target === o) closeDlg(); }));
+let errorsOn = true;
+function toggleErrors() { errorsOn = !errorsOn; document.querySelectorAll(".dialog .dlg-body").forEach(b => b.classList.toggle("show-errors", errorsOn)); }
+toggleErrors(); toggleErrors(); // 初期状態: ON
+document.querySelectorAll(".dlg-body").forEach(b => b.classList.add("show-errors"));
+function ioTab(btn, id) {
+  btn.parentElement.querySelectorAll("button").forEach(b=>b.classList.remove("on")); btn.classList.add("on");
+  document.getElementById("io-export").style.display = id==="io-export" ? "block" : "none";
+  document.getElementById("io-import").style.display = id==="io-import" ? "block" : "none";
+}
+
+// ---- タグピッカー（人物・イベント共通部品。色はタグ名のハッシュ mod 8 で決定的に割り当て） ----
+const TAG_COLORS = [
+  { bg:"#DBEAFE", fg:"#1E40AF", dot:"#3B82F6" }, { bg:"#DCFCE7", fg:"#166534", dot:"#22C55E" },
+  { bg:"#FEF3C7", fg:"#92400E", dot:"#F59E0B" }, { bg:"#F3E8FF", fg:"#6B21A8", dot:"#A855F7" },
+  { bg:"#FCE7F3", fg:"#9D174D", dot:"#EC4899" }, { bg:"#CCFBF1", fg:"#115E59", dot:"#14B8A6" },
+  { bg:"#FEE2E2", fg:"#991B1B", dot:"#EF4444" }, { bg:"#E5E7EB", fg:"#374151", dot:"#6B7280" },
+];
+const tagColor = name => TAG_COLORS[[...name].reduce((s,c)=>s+c.codePointAt(0),0) % 8];
+const REGISTERED_TAGS = ["戦国","大名","天下人","武将","剣豪","合戦","政治"]; // 年表内の人物・イベントのタグの和集合
+function buildPicker(elId, assigned) {
+  const el = document.getElementById(elId);
+  const pill = (t, cls, x) => { const c = tagColor(t);
+    return `<span class="tag-pill ${cls}" style="background:${c.bg};color:${c.fg}" data-tag="${t}"><span class="dot" style="background:${c.dot}"></span>${t}${x?'<span class="x">✕</span>':''}</span>`; };
+  const render = () => {
+    const avail = REGISTERED_TAGS.filter(t => !assigned.includes(t));
+    el.innerHTML =
+      `<div class="assigned">${assigned.length ? assigned.map(t=>pill(t,"rm",true)).join("") : '<span class="none">タグなし（下から選択、または新規作成）</span>'}</div>` +
+      `<div class="avail-label">登録済みタグから選択:</div>` +
+      `<div class="avail">${avail.length ? avail.map(t=>pill(t,"addable",false)).join("") : '<span class="none" style="font-size:12px;color:var(--color-text-muted)">すべて付与済み</span>'}</div>` +
+      `<div class="newtag"><input placeholder="新しいタグ名を入力" data-new><span class="sub">Enterで新規作成</span></div>`;
+    el.querySelectorAll(".rm").forEach(p => p.onclick = () => { assigned.splice(assigned.indexOf(p.dataset.tag),1); render(); });
+    el.querySelectorAll(".addable").forEach(p => p.onclick = () => { assigned.push(p.dataset.tag); render(); });
+    el.querySelector("[data-new]").addEventListener("keydown", e => {
+      if (e.key === "Enter" && e.target.value.trim()) {
+        const t = e.target.value.trim();
+        if (!assigned.includes(t)) assigned.push(t);
+        if (!REGISTERED_TAGS.includes(t)) REGISTERED_TAGS.push(t);
+        render();
+      }
+    });
+  };
+  render();
+}
+buildPicker("tp-person", ["戦国","天下人"]);
+buildPicker("tp-event", ["合戦"]);
+</script>
+</body>
+</html>

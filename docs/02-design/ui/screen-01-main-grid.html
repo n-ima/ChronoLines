@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>ChronoLines モックアップ: メイン画面（1年ズーム）</title>
+<style>
+  :root {
+    --color-bg:#FFFFFF; --color-surface:#F9FAFB; --color-text:#1F2937; --color-text-muted:#6B7280;
+    --color-border:#E5E7EB; --color-border-strong:#9CA3AF;
+    --color-alive-bg:#DBEAFE; --color-alive-text:#1E40AF; --color-alive-band:#3B82F6;
+    --color-virtual-bg:#F3F4F6; --color-virtual-text:#4B5563; --color-virtual-band:#9CA3AF;
+    --color-chip-bg:#FDE68A; --color-chip-text:#713F12; --color-selcol-bg:#FEF3C7;
+    --color-row-hilite:#FEF08A; --color-current-year:#DC2626;
+    --color-primary:#2563EB; --color-danger:#DC2626; --color-error-bg:#FEE2E2;
+    --font-family:"Segoe UI","Yu Gothic UI",Meiryo,system-ui,sans-serif;
+    --cell-w:44px; --cell-h:28px; --name-col-w:220px; --radius:4px;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:var(--font-family); font-size:14px; color:var(--color-text); background:var(--color-bg); }
+
+  /* ===== モックアップ確認用の状態切替バー（実装対象外） ===== */
+  .mock-bar { background:#111827; color:#fff; padding:8px 12px; display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .mock-bar span { font-size:12px; color:#9CA3AF; }
+  .mock-bar button { font-size:12px; padding:4px 10px; border-radius:var(--radius); border:1px solid #4B5563; background:#1F2937; color:#E5E7EB; cursor:pointer; }
+  .mock-bar button.active { background:var(--color-primary); border-color:var(--color-primary); color:#fff; }
+
+  /* ===== ツールバー ===== */
+  .toolbar { display:flex; align-items:center; gap:8px; padding:8px 12px; background:var(--color-surface); border-bottom:1px solid var(--color-border); flex-wrap:wrap; }
+  .toolbar .grow { flex:1; }
+  .btn { padding:6px 12px; border-radius:var(--radius); border:1px solid var(--color-border-strong); background:#fff; cursor:pointer; font-size:13px; color:var(--color-text); }
+  .btn.primary { background:var(--color-primary); border-color:var(--color-primary); color:#fff; }
+  select, input[type=text] { padding:6px 8px; border:1px solid var(--color-border-strong); border-radius:var(--radius); font-size:13px; font-family:inherit; }
+  .search-wrap { position:relative; }
+  .search-hits { font-size:12px; color:var(--color-text-muted); margin-left:4px; }
+  .search-none { display:none; font-size:12px; color:var(--color-danger); position:absolute; }
+  .range-wrap { display:flex; align-items:center; gap:4px; font-size:13px; color:var(--color-text-muted); }
+  .range-wrap input { width:72px; }
+  .zoom-toggle { display:flex; border:1px solid var(--color-border-strong); border-radius:var(--radius); overflow:hidden; }
+  .zoom-toggle button { border:0; padding:6px 12px; background:#fff; cursor:pointer; font-size:13px; }
+  .zoom-toggle button.on { background:var(--color-primary); color:#fff; }
+  .save-state { font-size:12px; color:var(--color-text-muted); }
+
+  /* ===== タグ（ピル・ドロップダウン） ===== */
+  .tag-pill { display:inline-flex; align-items:center; gap:5px; border-radius:999px; font-size:12px; padding:2px 10px; line-height:1.5; white-space:nowrap; }
+  .tag-pill .dot { width:8px; height:8px; border-radius:50%; flex:none; }
+  .tag-pill .x { cursor:pointer; opacity:.6; margin-left:2px; font-size:11px; }
+  .tag-pill .x:hover { opacity:1; }
+  .tag-dd-wrap { position:relative; }
+  .tag-dd { display:none; position:absolute; top:36px; left:0; z-index:20; background:#fff; border:1px solid var(--color-border-strong); border-radius:8px; box-shadow:0 6px 20px rgba(0,0,0,.15); padding:8px; width:260px; }
+  .tag-dd.open { display:block; }
+  .tag-dd .row { display:flex; align-items:center; gap:8px; padding:5px 6px; border-radius:var(--radius); cursor:pointer; font-size:13px; }
+  .tag-dd .row:hover { background:var(--color-surface); }
+  .tag-dd .row .cnt { margin-left:auto; font-size:11px; color:var(--color-text-muted); }
+  .tag-dd .foot { border-top:1px solid var(--color-border); margin-top:6px; padding-top:6px; text-align:right; }
+  .tag-dd .foot button { border:0; background:none; color:var(--color-primary); font-size:12px; cursor:pointer; }
+  .active-tags { display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+
+  /* ===== バナー ===== */
+  .banner { display:none; padding:8px 16px; font-size:13px; border-bottom:1px solid var(--color-border); }
+  .banner.error { background:var(--color-error-bg); color:#7F1D1D; }
+  .banner.info { background:var(--color-selcol-bg); color:#78350F; }
+  .banner .btn { margin-left:12px; padding:2px 10px; font-size:12px; }
+
+  /* ===== グリッド ===== */
+  .main { display:flex; height:calc(100vh - 96px); }
+  .grid-scroll { overflow:auto; flex:1; }
+  .grid { display:inline-block; min-width:100%; }
+  .grid-row { display:flex; height:var(--cell-h); }
+  .grid-row.year-header { height:32px; position:sticky; top:0; background:var(--color-bg); z-index:3; border-bottom:1px solid var(--color-border); }
+  .grid-row.event-lane { height:56px; position:sticky; top:32px; background:var(--color-bg); z-index:3; border-bottom:2px solid var(--color-border-strong); }
+  .name-cell { width:var(--name-col-w); min-width:var(--name-col-w); position:sticky; left:0; background:var(--color-surface); border-right:2px solid var(--color-border-strong); border-bottom:1px solid var(--color-border); padding:0 8px; display:flex; align-items:center; gap:6px; z-index:2; cursor:pointer; }
+  .grid-row.year-header .name-cell, .grid-row.event-lane .name-cell { z-index:4; cursor:default; }
+  .name-cell .nm { font-weight:600; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .name-cell .yrs { font-size:11px; color:var(--color-text-muted); white-space:nowrap; }
+  .name-cell .tagdots { display:inline-flex; gap:3px; margin-left:auto; flex:none; }
+  .name-cell .tagdots i { width:8px; height:8px; border-radius:50%; display:block; }
+  .name-cell.hit { background:var(--color-row-hilite); }
+  .cell { width:var(--cell-w); min-width:var(--cell-w); border-right:1px solid var(--color-border); border-bottom:1px solid var(--color-border); font-size:12px; display:flex; align-items:center; justify-content:center; position:relative; }
+  .cell.guide { border-right-color:var(--color-border-strong); }
+  .cell.alive { background:var(--color-alive-bg); color:var(--color-alive-text); font-weight:600; }
+  .cell.alive::after, .cell.virtual::after { content:""; position:absolute; left:0; right:0; bottom:0; height:3px; }
+  .cell.alive::after { background:var(--color-alive-band); }
+  .cell.virtual { background:var(--color-virtual-bg); color:var(--color-virtual-text); }
+  .cell.virtual::after { background:var(--color-virtual-band); }
+  .cell.selcol.blank { background:var(--color-selcol-bg); }
+  .cell.selcol { box-shadow:inset 2px 0 0 #F59E0B, inset -2px 0 0 #F59E0B; }
+  .yh { font-size:11px; color:var(--color-text-muted); justify-content:center; align-items:flex-end; padding-bottom:4px; cursor:pointer; border-bottom:0; }
+  .yh:hover, .yh.selcol { color:var(--color-text); font-weight:600; background:var(--color-selcol-bg); }
+  .ev-col { width:var(--cell-w); min-width:var(--cell-w); border-right:1px solid var(--color-border); display:flex; flex-direction:column; gap:2px; padding:2px 1px; cursor:pointer; }
+  .ev-col:hover { background:var(--color-selcol-bg); }
+  .ev-col.selcol { background:var(--color-selcol-bg); box-shadow:inset 2px 0 0 #F59E0B, inset -2px 0 0 #F59E0B; }
+  .chip { border-radius:3px; font-size:10px; line-height:1.2; padding:1px 3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; background:var(--color-chip-bg); color:var(--color-chip-text); }
+  .chip .pico { font-size:9px; }
+  .more-badge { font-size:10px; color:var(--color-chip-text); background:#FCD34D; border-radius:3px; text-align:center; padding:1px 2px; }
+
+  /* ===== サイドパネル ===== */
+  .side-panel { width:300px; min-width:300px; border-left:1px solid var(--color-border); background:var(--color-surface); display:none; flex-direction:column; overflow:auto; }
+  .side-panel.open { display:flex; }
+  .sp-head { display:flex; align-items:center; justify-content:space-between; padding:12px; border-bottom:1px solid var(--color-border); }
+  .sp-head h2 { font-size:16px; }
+  .sp-close { border:0; background:none; font-size:16px; cursor:pointer; color:var(--color-text-muted); }
+  .sp-sec { padding:12px; border-bottom:1px solid var(--color-border); }
+  .sp-sec h3 { font-size:12px; color:var(--color-text-muted); margin-bottom:8px; font-weight:600; }
+  .sp-event { padding:6px 8px; border:1px solid var(--color-border); border-radius:var(--radius); background:#fff; margin-bottom:6px; font-size:13px; cursor:pointer; }
+  .sp-event .meta { font-size:11px; color:var(--color-text-muted); display:flex; gap:6px; margin-top:3px; align-items:center; flex-wrap:wrap; }
+  .p-badge { background:var(--color-alive-bg); color:var(--color-alive-text); border-radius:8px; padding:0 8px; font-size:11px; }
+  .sp-age-row { display:flex; justify-content:space-between; padding:3px 8px; font-size:13px; border-radius:var(--radius); cursor:pointer; }
+  .sp-age-row:hover { background:var(--color-selcol-bg); }
+  .age-val.alive { color:var(--color-alive-text); font-weight:600; }
+  .age-val.virtual { color:var(--color-virtual-text); }
+
+  .empty-state { display:none; flex-direction:column; align-items:center; justify-content:center; gap:12px; flex:1; color:var(--color-text-muted); }
+</style>
+</head>
+<body>
+
+<div class="mock-bar">
+  <span>【モックアップ確認用・状態切替】</span>
+  <button data-state="default" class="active">通常</button>
+  <button data-state="event">イベント選択（1600年）</button>
+  <button data-state="search">検索「政宗」</button>
+  <button data-state="filter">タグ絞り込み（合戦+天下人）</button>
+  <button data-state="empty-range">範囲に該当なし</button>
+  <button data-state="save-error">保存エラー</button>
+  <button data-state="empty">空の年表</button>
+  <span>タグ▼・イベントチップ・年ヘッダーは実際にクリックできます（実動線）</span>
+</div>
+
+<div class="toolbar">
+  <select id="tl-select"><option>戦国</option><option>幕末</option><option>年表の管理...</option></select>
+  <div class="search-wrap">
+    <input type="text" id="search" placeholder="人物名で検索" style="width:130px">
+    <span class="search-hits" id="search-hits"></span>
+    <div class="search-none" id="search-none">該当なし</div>
+  </div>
+  <div class="tag-dd-wrap">
+    <button class="btn" id="tag-btn" onclick="toggleTagDd()">タグ ▼</button>
+    <div class="tag-dd" id="tag-dd"></div>
+  </div>
+  <div class="active-tags" id="active-tags"></div>
+  <select><option>並び順: 生年順</option><option>並び順: 手動</option></select>
+  <div class="range-wrap">範囲 <input type="text" id="range-start" placeholder="1521（自動）"> 〜 <input type="text" id="range-end" placeholder="2026（自動）"></div>
+  <div class="zoom-toggle"><button class="on">1年</button><button title="モックアップでは screen-02 を参照">10年</button></div>
+  <div class="grow"></div>
+  <button class="btn primary">＋人物</button>
+  <button class="btn">＋イベント</button>
+  <button class="btn">入出力</button>
+  <button class="btn">画像出力</button>
+  <span class="save-state" id="save-state">保存済み 14:03:22</span>
+</div>
+
+<div class="banner error" id="banner-error">
+  保存できていません（最終保存: 14:03:22）。編集内容はこの画面に保持されています。復旧しない場合は「入出力」からJSONエクスポートで退避できます。
+  <button class="btn">再試行</button>
+</div>
+<div class="banner info" id="banner-range">指定した範囲（1200〜1300）に該当する人物・イベントはありません。範囲を変更してください。</div>
+
+<div class="main">
+  <div class="grid-scroll" id="grid-scroll"><div class="grid" id="grid"></div></div>
+  <div class="empty-state" id="empty-state">
+    <div style="font-size:40px">📜</div>
+    <div>この年表にはまだ人物がいません。<br>人物を追加して年表を作りましょう。</div>
+    <button class="btn primary">＋人物を追加</button>
+  </div>
+  <aside class="side-panel" id="side-panel">
+    <div class="sp-head"><h2 id="sp-year">1600年</h2><button class="sp-close" onclick="closePanel()">✕</button></div>
+    <div class="sp-sec"><h3>イベント（<span id="sp-ev-count"></span>件）</h3><div id="sp-events"></div></div>
+    <div class="sp-sec"><h3>この年の年齢（表示中の人物）</h3><div id="sp-ages"></div></div>
+  </aside>
+</div>
+
+<script>
+// ---- タグ配色（design-tokens.md の8色。タグ名のハッシュ mod 8 で決定的に割り当て） ----
+const TAG_COLORS = [
+  { bg:"#DBEAFE", fg:"#1E40AF", dot:"#3B82F6" }, // blue
+  { bg:"#DCFCE7", fg:"#166534", dot:"#22C55E" }, // green
+  { bg:"#FEF3C7", fg:"#92400E", dot:"#F59E0B" }, // amber
+  { bg:"#F3E8FF", fg:"#6B21A8", dot:"#A855F7" }, // purple
+  { bg:"#FCE7F3", fg:"#9D174D", dot:"#EC4899" }, // pink
+  { bg:"#CCFBF1", fg:"#115E59", dot:"#14B8A6" }, // teal
+  { bg:"#FEE2E2", fg:"#991B1B", dot:"#EF4444" }, // red
+  { bg:"#E5E7EB", fg:"#374151", dot:"#6B7280" }, // gray
+];
+const tagColor = name => TAG_COLORS[[...name].reduce((s,c)=>s+c.codePointAt(0),0) % 8];
+const tagPill = (name, removable) => {
+  const c = tagColor(name);
+  return `<span class="tag-pill" style="background:${c.bg};color:${c.fg}"><span class="dot" style="background:${c.dot}"></span>${name}${removable?`<span class="x" onclick="removeTag('${name}')">✕</span>`:''}</span>`;
+};
+
+// ---- ダミーデータ（人物・イベントともタグは0個以上・複数可） ----
+const persons = [
+  { name:"武田信玄", birth:1521, death:1573, tags:["戦国","大名"] },
+  { name:"明智光秀", birth:1528, death:1582, tags:["戦国","武将"] },
+  { name:"上杉謙信", birth:1530, death:1578, tags:["戦国","大名"] },
+  { name:"織田信長", birth:1534, death:1582, tags:["戦国","天下人"] },
+  { name:"豊臣秀吉", birth:1537, death:1598, tags:["戦国","天下人"] },
+  { name:"徳川家康", birth:1543, death:1616, tags:["戦国","天下人"] },
+  { name:"石田三成", birth:1560, death:1600, tags:["戦国","武将"] },
+  { name:"伊達政宗", birth:1567, death:1636, tags:["戦国","大名"] },
+  { name:"真田幸村", birth:1567, death:1615, tags:["戦国","武将"] },
+  { name:"宮本武蔵", birth:1584, death:1645, tags:["剣豪"] },
+];
+const events = [
+  { name:"豊臣秀吉死去", year:1598, person:"豊臣秀吉", tags:[] },
+  { name:"関ヶ原の戦い", year:1600, note:"天下分け目の合戦。東軍勝利。", tags:["合戦"] },
+  { name:"会津征伐", year:1600, tags:["合戦"] },
+  { name:"江戸幕府開府", year:1603, tags:["政治"] },
+  { name:"大坂冬の陣", year:1614, tags:["合戦"] },
+  { name:"大坂夏の陣", year:1615, tags:["合戦"] },
+  { name:"武家諸法度制定", year:1615, tags:["政治"] },
+  { name:"禁中並公家諸法度制定", year:1615, tags:["政治"] },
+  { name:"徳川家康死去", year:1616, person:"徳川家康", tags:[] },
+];
+let RANGE = { start:1595, end:1620 };
+let selectedYear = null, searchQuery = "", selectedTags = [];
+
+// ---- 絞り込み（OR条件。人物・イベントの両方に適用。domain-logic.md filterByTags / filterEventsByTags） ----
+const visPersons = () => selectedTags.length ? persons.filter(p => p.tags.some(t => selectedTags.includes(t))) : persons;
+const visEvents  = () => selectedTags.length ? events.filter(e => e.tags.some(t => selectedTags.includes(t))) : events;
+const allTags = () => { const s = []; for (const x of [...persons, ...events]) for (const t of x.tags) if (!s.includes(t)) s.push(t); return s; };
+
+function cellKind(p, y) {
+  if (y < p.birth) return { kind:"blank" };
+  if (p.death && y > p.death) return { kind:"virtual", age:y - p.birth };
+  return { kind:"alive", age:y - p.birth };
+}
+
+function render() {
+  const grid = document.getElementById("grid");
+  const years = []; for (let y = RANGE.start; y <= RANGE.end; y++) years.push(y);
+  const em = visEvents().reduce((m,e) => ((m[e.year] ??= []).push(e), m), {});
+  let h = '<div class="grid-row year-header"><div class="name-cell"><span class="nm">人物</span></div>';
+  for (const y of years) h += `<div class="cell yh ${y%10===0?'guide':''} ${y===selectedYear?'selcol':''}" onclick="selectYear(${y})">${y}</div>`;
+  h += '</div><div class="grid-row event-lane"><div class="name-cell"><span class="yrs">イベント</span></div>';
+  for (const y of years) {
+    const evs = em[y] || [];
+    h += `<div class="ev-col ${y===selectedYear?'selcol':''}" onclick="selectYear(${y})">`;
+    for (const e of evs.slice(0,2)) {
+      const c = e.tags[0] ? tagColor(e.tags[0]) : null;
+      const st = c ? `style="background:${c.bg};color:${c.fg}"` : '';
+      h += `<div class="chip" ${st} title="${e.name}${e.tags.length?'（'+e.tags.join('、')+'）':''}">${e.person?'<span class="pico">👤</span>':''}${e.name}</div>`;
+    }
+    if (evs.length > 2) h += `<div class="more-badge">+${evs.length-2}</div>`;
+    h += '</div>';
+  }
+  h += '</div>';
+  for (const p of visPersons()) {
+    const hit = searchQuery && p.name.includes(searchQuery);
+    const dots = p.tags.slice(0,4).map(t => `<i style="background:${tagColor(t).dot}" title="${t}"></i>`).join("");
+    h += `<div class="grid-row"><div class="name-cell ${hit?'hit':''}" title="タグ: ${p.tags.join('、')||'なし'}"><span class="nm">${p.name}</span><span class="yrs">${p.birth}–${p.death??''}</span><span class="tagdots">${dots}</span></div>`;
+    for (const y of years) {
+      const c = cellKind(p, y);
+      const cls = ['cell', c.kind, y%10===0?'guide':'', y===selectedYear?'selcol':''].join(' ');
+      const txt = c.kind==='alive' ? c.age : c.kind==='virtual' ? `(${c.age})` : '';
+      const tip = c.kind==='alive' ? `${y}年 ${p.name} ${c.age}歳（生存中）` : c.kind==='virtual' ? `${y}年 ${p.name}（没後・生きていれば${c.age}歳）` : '';
+      h += `<div class="${cls}" title="${tip}">${txt}</div>`;
+    }
+    h += '</div>';
+  }
+  grid.innerHTML = h;
+  renderTagUi(); renderPanel(em);
+  const hits = searchQuery ? visPersons().filter(p=>p.name.includes(searchQuery)).length : 0;
+  document.getElementById("search-hits").textContent = searchQuery ? (hits ? `${hits}/${hits}件` : "") : "";
+  document.getElementById("search-none").style.display = (searchQuery && !hits) ? "block" : "none";
+}
+
+function renderTagUi() {
+  // ドロップダウン: 全タグ + チェックボックス + 件数
+  const dd = document.getElementById("tag-dd");
+  dd.innerHTML = allTags().map(t => {
+    const c = tagColor(t);
+    const pn = persons.filter(p=>p.tags.includes(t)).length, en = events.filter(e=>e.tags.includes(t)).length;
+    return `<label class="row"><input type="checkbox" ${selectedTags.includes(t)?'checked':''} onchange="toggleTag('${t}')">
+      <span class="dot" style="width:8px;height:8px;border-radius:50%;background:${c.dot}"></span>${t}
+      <span class="cnt">人物${pn}・イベント${en}</span></label>`;
+  }).join("") + `<div class="foot"><button onclick="clearTags()">すべて解除</button></div>`;
+  // 適用中の色付きピル
+  document.getElementById("active-tags").innerHTML = selectedTags.map(t => tagPill(t, true)).join("");
+  document.getElementById("tag-btn").textContent = selectedTags.length ? `タグ（${selectedTags.length}） ▼` : "タグ ▼";
+}
+function toggleTagDd() { document.getElementById("tag-dd").classList.toggle("open"); }
+function toggleTag(t) { selectedTags = selectedTags.includes(t) ? selectedTags.filter(x=>x!==t) : [...selectedTags, t]; render(); document.getElementById("tag-dd").classList.add("open"); }
+function removeTag(t) { selectedTags = selectedTags.filter(x=>x!==t); render(); }
+function clearTags() { selectedTags = []; render(); }
+document.addEventListener("click", e => { if (!e.target.closest(".tag-dd-wrap")) document.getElementById("tag-dd").classList.remove("open"); });
+
+function renderPanel(em) {
+  const panel = document.getElementById("side-panel");
+  if (selectedYear == null) { panel.classList.remove("open"); return; }
+  panel.classList.add("open");
+  document.getElementById("sp-year").textContent = `${selectedYear}年`;
+  const evs = (em || {})[selectedYear] || [];
+  document.getElementById("sp-ev-count").textContent = evs.length;
+  document.getElementById("sp-events").innerHTML = evs.length
+    ? evs.map(e => `<div class="sp-event">${e.name}<div class="meta">${e.person?`<span class="p-badge">👤 ${e.person}</span>`:''}${e.tags.map(t=>tagPill(t,false)).join('')}${e.note?'📝 '+e.note:''}<span style="margin-left:auto">編集</span></div></div>`).join("")
+    : '<div style="font-size:12px;color:var(--color-text-muted)">この年のイベントはありません</div>';
+  document.getElementById("sp-ages").innerHTML = visPersons().map(p => {
+    const c = cellKind(p, selectedYear);
+    if (c.kind === "blank") return `<div class="sp-age-row"><span>${p.name}</span><span class="age-val" style="color:var(--color-text-muted)">—（生前）</span></div>`;
+    return `<div class="sp-age-row"><span>${p.name}</span><span class="age-val ${c.kind}">${c.kind==='virtual'?`(${c.age})`:c.age}</span></div>`;
+  }).join("");
+}
+function selectYear(y) { selectedYear = y; render(); }
+function closePanel() { selectedYear = null; render(); }
+document.addEventListener("keydown", e => { if (e.key === "Escape") closePanel(); });
+
+// ---- 状態切替（モックアップ確認用） ----
+const states = {
+  "default":    () => {},
+  "event":      () => { selectedYear = 1600; },
+  "search":     () => { searchQuery = "政宗"; document.getElementById("search").value = "政宗"; },
+  "filter":     () => { selectedTags = ["合戦","天下人"]; },
+  "empty-range":() => { RANGE = { start:1200, end:1225 };
+                        document.getElementById("range-start").value = "1200";
+                        document.getElementById("range-end").value = "1300";
+                        document.getElementById("banner-range").style.display = "block"; },
+  "save-error": () => { document.getElementById("banner-error").style.display = "block";
+                        document.getElementById("save-state").textContent = "未保存の変更あり"; },
+  "empty":      () => { document.getElementById("grid-scroll").style.display = "none";
+                        document.getElementById("empty-state").style.display = "flex"; },
+};
+document.querySelectorAll(".mock-bar button").forEach(b => b.onclick = () => {
+  document.querySelectorAll(".mock-bar button").forEach(x => x.classList.remove("active"));
+  b.classList.add("active");
+  RANGE = { start:1595, end:1620 }; selectedYear = null; searchQuery = ""; selectedTags = [];
+  document.getElementById("search").value = ""; document.getElementById("range-start").value = "";
+  document.getElementById("range-end").value = "";
+  document.getElementById("banner-error").style.display = "none";
+  document.getElementById("banner-range").style.display = "none";
+  document.getElementById("grid-scroll").style.display = "block";
+  document.getElementById("empty-state").style.display = "none";
+  document.getElementById("save-state").textContent = "保存済み 14:03:22";
+  states[b.dataset.state]();
+  render();
+});
+document.getElementById("search").addEventListener("input", e => { searchQuery = e.target.value.trim(); render(); });
+render();
+</script>
+</body>
+</html>
