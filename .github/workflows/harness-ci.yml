@@ -1,0 +1,27 @@
+# ハーネス自身の整合性CI(D046)。
+# 「指示よりフックで機械的に強制する」を説く本体が、自身の不変条件
+# (アダプタ整合・フック挙動・計測/評価ツール)を手動検査に頼っていた矛盾を塞ぐ。
+# 個別プロジェクト(テンプレートのコピー先)でも無害に動く: いずれも自己完結の検査で、
+# プロジェクトのアプリコードには触れない。
+name: harness-ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: 構造検証(フロントマター・アダプタ整合・フック配線)
+        run: python tools/validate-harness.py
+      - name: フック自己テスト(ガード判定の回帰)
+        run: bash .github/hooks/scripts/selftest.sh
+      - name: 計測ロガー自己テスト
+        run: python .github/hooks/scripts/log-effort.py --selftest
+      - name: Golden Eval 自己テスト(完了検証チェッカー)
+        run: python tools/golden-eval.py --selftest

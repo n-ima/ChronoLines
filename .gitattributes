@@ -1,0 +1,6 @@
+# bashスクリプトはCRLFだと実行時に壊れるため、常にLFでチェックアウトする
+# (Windowsのcore.autocrlf=true環境でクローンしたときのフック全滅事故を防ぐ)
+* text=auto
+*.sh text eol=lf
+# PowerShell 5.1はUTF-8 BOM付き前提(BOMはファイル内容として保持される)
+*.ps1 text

@@ -1,0 +1,22 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "type": "command",
+        "command": "bash .github/hooks/scripts/guard-harness-config-edit.sh",
+        "windows": "powershell -NoProfile -ExecutionPolicy Bypass -File .github/hooks/scripts/guard-harness-config-edit.ps1",
+        "linux": "bash .github/hooks/scripts/guard-harness-config-edit.sh",
+        "osx": "bash .github/hooks/scripts/guard-harness-config-edit.sh",
+        "timeout": 5
+      },
+      {
+        "type": "command",
+        "command": "bash .github/hooks/scripts/guard-secret-leak.sh",
+        "windows": "powershell -NoProfile -ExecutionPolicy Bypass -File .github/hooks/scripts/guard-secret-leak.ps1",
+        "linux": "bash .github/hooks/scripts/guard-secret-leak.sh",
+        "osx": "bash .github/hooks/scripts/guard-secret-leak.sh",
+        "timeout": 5
+      }
+    ]
+  }
+}

@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>エージェント一覧 — copilot-sdlc-harness</title>
+<style>
+  :root {
+    --bg:#f6f8fd; --bg2:#eef2fa; --card:#fff; --border:#dfe6f3;
+    --text:#1b2437; --muted:#5d6b8a; --accent:#2f6fed; --accent2:#0d9e94;
+    --accent3:#7c4dff; --warn:#d97a06;
+    --grad:linear-gradient(135deg,#2f6fed 0%,#0d9e94 100%);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--bg);color:var(--text);font-family:"Inter","Noto Sans JP","Hiragino Sans","Segoe UI",sans-serif;line-height:1.75;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 28px}
+  .top{background:#fff;border-bottom:1px solid var(--border);padding:14px 0}
+  .top .wrap{display:flex;align-items:center;gap:22px;flex-wrap:wrap}
+  .top b{font-size:15px}
+  .top nav{display:flex;gap:16px;flex-wrap:wrap}
+  .top a{color:var(--muted);text-decoration:none;font-size:13.5px;font-weight:600}
+  .top a:hover{color:var(--accent)}
+  .top a.here{color:var(--accent);border-bottom:2px solid var(--accent)}
+  .hero{padding:44px 0 8px}
+  h1{font-size:clamp(24px,4vw,36px);font-weight:900;letter-spacing:-.01em;margin-bottom:10px}
+  h1 .grad{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .lead{color:var(--muted);max-width:780px;font-size:15px;margin-bottom:8px}
+  section{padding:36px 0 4px}
+  .sec-label{font-size:12px;letter-spacing:.18em;color:var(--accent);font-weight:800;margin-bottom:6px}
+  h2{font-size:clamp(19px,2.6vw,26px);font-weight:800;margin-bottom:10px}
+  .sec-desc{color:var(--muted);max-width:780px;margin-bottom:22px;font-size:14px}
+  .sec-desc b{color:var(--text)}
+  table{width:100%;border-collapse:collapse;background:var(--card);border-radius:14px;overflow:hidden;border:1px solid var(--border);box-shadow:0 4px 18px rgba(31,58,120,.07);margin-bottom:14px}
+  th,td{padding:12px 14px;text-align:left;font-size:13.5px;border-bottom:1px solid var(--border);vertical-align:top}
+  th{background:var(--bg2);font-size:12px;letter-spacing:.06em;color:var(--muted);white-space:nowrap}
+  tr:last-child td{border-bottom:none}
+  td b{font-weight:700}
+  code{background:var(--bg2);border:1px solid var(--border);border-radius:5px;padding:1px 6px;font-size:12.5px;font-family:Consolas,Menlo,monospace}
+  .pill{display:inline-block;border-radius:999px;padding:1px 10px;font-size:11.5px;font-weight:700;white-space:nowrap}
+  .pill.phase{background:rgba(47,111,237,.10);color:var(--accent)}
+  .pill.sub{background:rgba(13,158,148,.12);color:var(--accent2)}
+  .pill.maint{background:rgba(217,122,6,.12);color:var(--warn)}
+  .pill.auto{background:rgba(124,77,255,.10);color:var(--accent3)}
+  .note{background:var(--card);border:1px solid var(--border);border-left:4px solid var(--accent2);border-radius:10px;padding:14px 18px;font-size:13.5px;color:var(--muted);margin-bottom:14px}
+  .note b{color:var(--text)}
+  .route{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px 22px;margin-bottom:12px;box-shadow:0 2px 8px rgba(31,58,120,.05)}
+  .route h3{font-size:15px;font-weight:700;margin-bottom:4px}
+  .route p{font-size:13.5px;color:var(--muted)}
+  .route .arrow{color:var(--accent2);font-weight:800}
+  footer{margin-top:56px;border-top:1px solid var(--border);padding:28px 0 40px;background:var(--bg2);color:var(--muted);font-size:12.5px}
+  footer a{color:var(--accent);text-decoration:none;font-weight:600}
+  .scroll{overflow-x:auto}
+</style>
+</head>
+<body>
+
+<div class="top"><div class="wrap">
+  <b>copilot-sdlc-harness</b>
+  <nav>
+    <a href="overview.html">概要</a>
+    <a class="here" href="agents.html">エージェント</a>
+    <a href="skills.html">スキル</a>
+    <a href="commands.html">コマンド</a>
+    <a href="guardrails.html">ガードレール</a>
+  </nav>
+</div></div>
+
+<div class="hero"><div class="wrap">
+  <h1>エージェント一覧 <span class="grad">— 誰が、何を、どこまでやるか</span></h1>
+  <p class="lead">
+    このハーネスには11のエージェントがいます。フェーズ専属の7つが開発を進め、
+    独立コンテキストのサブエージェント3つが品質を守り、1つが本体の保守を担います。
+    各エージェントは<b>必要最小限のツール権限</b>しか持ちません（最小権限の原則）。
+  </p>
+</div></div>
+
+<section><div class="wrap">
+  <div class="sec-label">PHASE AGENTS</div>
+  <h2>フェーズ専属エージェント（7）</h2>
+  <p class="sec-desc">対応するスラッシュコマンドを実行すると自動的にそのエージェントに切り替わります（手動切り替え不要）。</p>
+  <div class="scroll">
+  <table>
+    <tr><th>エージェント</th><th>役割</th><th>主な起動コマンド</th><th>ツール権限</th><th>呼べるサブエージェント</th></tr>
+    <tr>
+      <td><b>orchestrator</b> <span class="pill auto">model:auto</span></td>
+      <td>進行管理。docs/ の状態から進捗を確認し、次に進むべきフェーズを提案する。自身では要件・設計・実装を書かない</td>
+      <td><code>/00</code> <code>/99</code> <code>/98</code> <code>/10</code> <code>/91</code></td>
+      <td>読取・検索・編集（progress.md用）</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td><b>requirements</b></td>
+      <td>要件定義。要件メモを起点に質問と対話で要件定義書・非機能要件・環境情報を作る。<b>人が最も厚く関わる相手</b></td>
+      <td><code>/01</code> <code>/02</code> <code>/11</code></td>
+      <td>読取・編集・検索・Web（<b>execute無し</b>）</td>
+      <td>spec-critic（承認前に1回）</td>
+    </tr>
+    <tr>
+      <td><b>design</b></td>
+      <td>設計。技術スタック候補の提示（選定は人）、アーキテクチャ・詳細設計・ADRの作成。UIがあればモックアップで視覚確認</td>
+      <td><code>/03</code> <code>/04</code></td>
+      <td>読取・編集・検索・Web（<b>execute無し</b>）</td>
+      <td>spec-critic（承認前に1回）</td>
+    </tr>
+    <tr>
+      <td><b>implement</b> <span class="pill auto">model:auto</span></td>
+      <td>実装コーディネーター。設計をタスクに分解し（完了条件=done契約つき）、実装そのものは task-worker に1タスクずつ委譲。同一タスク3回失敗で自動停止して人へ</td>
+      <td><code>/05</code> <code>/06</code></td>
+      <td>読取・編集・検索・実行</td>
+      <td>task-worker（タスク数だけ）</td>
+    </tr>
+    <tr>
+      <td><b>test</b> <span class="pill auto">model:auto</span></td>
+      <td>テスト。要件・設計からテスト計画を作り、テストを自動で実装・実行・修正。完了後に独立レビューを起動</td>
+      <td><code>/07</code> <code>/08</code></td>
+      <td>読取・編集・検索・実行・Playwright</td>
+      <td>reviewer（1回）</td>
+    </tr>
+    <tr>
+      <td><b>release</b></td>
+      <td>リリース。environment.md と環境固有スキルに基づき自動実行。人手必須と明示された作業だけ人に委ねる。push/タグは必ず確認</td>
+      <td><code>/09</code></td>
+      <td>読取・編集・検索・実行・Web</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td><b>change</b> <span class="pill auto">model:auto</span></td>
+      <td>変更請求（運用中の日常）。依頼を4分類し、影響範囲をトレーサビリティから辿り、該当フェーズだけ再ゲートして実装・テスト・台帳記録まで1CRずつ完結</td>
+      <td><code>/12</code></td>
+      <td>読取・編集・検索・実行</td>
+      <td>task-worker / spec-critic / reviewer</td>
+    </tr>
+  </table>
+  </div>
+</div></section>
+
+<section><div class="wrap">
+  <div class="sec-label">SUBAGENTS</div>
+  <h2>サブエージェント（3）— 独立コンテキストの品質担当</h2>
+  <p class="sec-desc">
+    呼び出されるたびに<b>まっさらな別コンテキスト</b>で起動します。書いた本人の思い込みを
+    引き継がないこと（バイアス除去）と、会話を肥大化させないこと（コンテキストロット対策）の
+    両方を1つの仕組みで実現しています。
+  </p>
+  <div class="scroll">
+  <table>
+    <tr><th>サブエージェント</th><th>役割</th><th>ツール権限</th><th>基本姿勢</th></tr>
+    <tr>
+      <td><b>spec-critic</b> <span class="pill sub">読取専用</span></td>
+      <td>仕様の批評家。要件定義書・設計書の抜け・曖昧さ・矛盾をゲート承認の直前に検出する。上流の欠陥ほど下流の修正コストが大きいため、<b>最も費用対効果の高いレビュー</b>として既定に含む</td>
+      <td>読取・検索のみ（編集不可）</td>
+      <td>「承認推奨」をデフォルトにせず、まず反証を探す（懐疑チューニング）</td>
+    </tr>
+    <tr>
+      <td><b>reviewer</b> <span class="pill sub">読取専用</span></td>
+      <td>独立コードレビュー。正しさ・セキュリティ（8ステップ監査）・品質を確認。テストの弱体化・失敗を隠すフォールバック・プレースホルダ実装・done契約証拠の照合など、自動実装特有の失敗モードも検査する</td>
+      <td>読取・検索のみ（編集不可）</td>
+      <td>「合格」をデフォルトにせず、壊れるシナリオを探す（懐疑チューニング）</td>
+    </tr>
+    <tr>
+      <td><b>task-worker</b> <span class="pill auto">model:auto</span></td>
+      <td>1タスク専用の実装ワーカー。tasks.md の1タスクだけを実装し、<b>完了条件（done契約）を実行して証拠つきで完了</b>にする。書く前に必ずコードベースを検索（思い込み再実装の防止）</td>
+      <td>読取・編集・検索・実行</td>
+      <td>完了条件を満たせなければ「失敗」として返す（テストを緩めて通さない）</td>
+    </tr>
+  </table>
+  </div>
+  <div class="note"><b>ハーネス本体専用:</b> <b>harness-maintainer</b> — 振り返りの改善提案をテンプレート本体へ適用し DECISIONS.md に記録する保守エージェント（<code>/90</code>）。アプリ開発プロジェクトでは使いません。</div>
+</div></section>
+
+<section><div class="wrap">
+  <div class="sec-label">DEFAULT ROUTES</div>
+  <h2>既定のサブエージェント経路は5つだけ</h2>
+  <p class="sec-desc">
+    サブエージェントは呼ぶほどコストが増えるため、既定経路を5つに限定しています。
+    並列多視点レビュー等の追加呼び出しは、重要度に応じてユーザーが明示的に要求した場合のみ。
+  </p>
+  <div class="route"><h3>requirements <span class="arrow">→</span> spec-critic（ゲート承認前に1回）</h3><p>要件定義書の検証可能性・受け入れ条件・NFR定量性・環境情報の実在性を独立レビュー</p></div>
+  <div class="route"><h3>design <span class="arrow">→</span> spec-critic（ゲート承認前に1回）</h3><p>設計書のトレーサビリティ・実装可能性・YAGNI違反を独立レビュー</p></div>
+  <div class="route"><h3>implement <span class="arrow">→</span> task-worker（タスク数だけ）</h3><p>1タスク=1独立コンテキスト。コーディネーターの会話は進捗管理だけに保つ</p></div>
+  <div class="route"><h3>test <span class="arrow">→</span> reviewer（1回）</h3><p>実装した本人に自己承認させない。リリース前の必須通過点</p></div>
+  <div class="route"><h3>change <span class="arrow">→</span> task-worker / spec-critic / reviewer（変更請求ごと）</h3><p>運用中の改修でも同じ品質経路を差分適用（実装は1タスクずつ、再ゲート前に仕様レビュー、コード変更CRはレビュー必須）</p></div>
+
+  <div class="note">
+    <b>なぜ実装工程にコードレビューを挟まないのか（検証階層に基づく意図的な設計）:</b>
+    AIエージェント開発の公式ガイダンス・実証研究（2026-08時点）が一致して示す原則は2つあります。
+    (1) <b>完了は自然言語の主張ではなく決定論的検証（テスト・ビルド）に束縛する</b>——
+    テストで判定できることをLLMに判定させるのは設計上の後退（Anthropicのハーネス設計指針）。
+    (2) <b>意味的なレビューは、実装の思考過程を引き継がないクリーンなコンテキストで行うほど
+    精度が高い</b>（Cognitionの実測: 独立レビューはPRあたり約2バグ・58%重大を検出）。
+    そこで本ハーネスは、実装工程の品質を<b>タスク単位の機械的検証</b>（done契約=検証コマンド+
+    実行時確認の証拠なしに完了できない・テスト必須・3回失敗で停止）で守り、
+    <b>意味的な独立レビュー（reviewer）は実装＋テストの出口に1回</b>置いて成果全体を監査します
+    （問題があれば実装へ自動差し戻し）。タスクごとのLLMレビューは、コスト増と
+    過剰ゲート（approval fatigue）を招くため既定にせず、重要案件でユーザーが明示的に
+    要求した場合に追加します。
+  </div>
+</div></section>
+
+<footer><div class="wrap">
+  <p><a href="overview.html">← 概要に戻る</a>　|　定義の実体: <code>.github/agents/*.agent.md</code>（正のレイヤ）。設計判断の根拠は <code>DECISIONS.md</code> を参照。</p>
+</div></footer>
+
+</body>
+</html>

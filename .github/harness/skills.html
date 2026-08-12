@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>スキル一覧 — copilot-sdlc-harness</title>
+<style>
+  :root {
+    --bg:#f6f8fd; --bg2:#eef2fa; --card:#fff; --border:#dfe6f3;
+    --text:#1b2437; --muted:#5d6b8a; --accent:#2f6fed; --accent2:#0d9e94;
+    --accent3:#7c4dff; --warn:#d97a06;
+    --grad:linear-gradient(135deg,#2f6fed 0%,#0d9e94 100%);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--bg);color:var(--text);font-family:"Inter","Noto Sans JP","Hiragino Sans","Segoe UI",sans-serif;line-height:1.75;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 28px}
+  .top{background:#fff;border-bottom:1px solid var(--border);padding:14px 0}
+  .top .wrap{display:flex;align-items:center;gap:22px;flex-wrap:wrap}
+  .top b{font-size:15px}
+  .top nav{display:flex;gap:16px;flex-wrap:wrap}
+  .top a{color:var(--muted);text-decoration:none;font-size:13.5px;font-weight:600}
+  .top a:hover{color:var(--accent)}
+  .top a.here{color:var(--accent);border-bottom:2px solid var(--accent)}
+  .hero{padding:44px 0 8px}
+  h1{font-size:clamp(24px,4vw,36px);font-weight:900;letter-spacing:-.01em;margin-bottom:10px}
+  h1 .grad{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .lead{color:var(--muted);max-width:780px;font-size:15px}
+  section{padding:36px 0 4px}
+  .sec-label{font-size:12px;letter-spacing:.18em;color:var(--accent);font-weight:800;margin-bottom:6px}
+  h2{font-size:clamp(19px,2.6vw,26px);font-weight:800;margin-bottom:10px}
+  .sec-desc{color:var(--muted);max-width:780px;margin-bottom:22px;font-size:14px}
+  .sec-desc b{color:var(--text)}
+  table{width:100%;border-collapse:collapse;background:var(--card);border-radius:14px;overflow:hidden;border:1px solid var(--border);box-shadow:0 4px 18px rgba(31,58,120,.07);margin-bottom:14px}
+  th,td{padding:12px 14px;text-align:left;font-size:13.5px;border-bottom:1px solid var(--border);vertical-align:top}
+  th{background:var(--bg2);font-size:12px;letter-spacing:.06em;color:var(--muted);white-space:nowrap}
+  tr:last-child td{border-bottom:none}
+  td b{font-weight:700}
+  code{background:var(--bg2);border:1px solid var(--border);border-radius:5px;padding:1px 6px;font-size:12.5px;font-family:Consolas,Menlo,monospace}
+  .note{background:var(--card);border:1px solid var(--border);border-left:4px solid var(--accent2);border-radius:10px;padding:14px 18px;font-size:13.5px;color:var(--muted);margin-bottom:14px}
+  .note b{color:var(--text)}
+  footer{margin-top:56px;border-top:1px solid var(--border);padding:28px 0 40px;background:var(--bg2);color:var(--muted);font-size:12.5px}
+  footer a{color:var(--accent);text-decoration:none;font-weight:600}
+  .scroll{overflow-x:auto}
+</style>
+</head>
+<body>
+
+<div class="top"><div class="wrap">
+  <b>copilot-sdlc-harness</b>
+  <nav>
+    <a href="overview.html">概要</a>
+    <a href="agents.html">エージェント</a>
+    <a class="here" href="skills.html">スキル</a>
+    <a href="commands.html">コマンド</a>
+    <a href="guardrails.html">ガードレール</a>
+  </nav>
+</div></div>
+
+<div class="hero"><div class="wrap">
+  <h1>スキル一覧 <span class="grad">— 手順とチェックリストの部品（19）</span></h1>
+  <p class="lead">
+    スキルは「どうやるか」をパッケージ化した手順書です。エージェントを薄く保ち、詳細は
+    スキルに逃がす設計。<b>段階的開示</b>（普段は名前と説明だけ読み込み、関連するときだけ本文を
+    読む）なので、数が増えてもコンテキストを圧迫しません。エージェントが必要な場面で自動的に
+    参照するため、<b>ユーザーがスキル名を覚える必要はありません</b>。
+  </p>
+</div></div>
+
+<section><div class="wrap">
+  <div class="sec-label">PHASE PROCEDURES</div>
+  <h2>フェーズの手順（7）</h2>
+  <div class="scroll">
+  <table>
+    <tr><th>スキル</th><th>何をするか</th><th>主に使うエージェント</th></tr>
+    <tr><td><b>requirements-elicitation</b></td><td>要件の不足・曖昧さを体系的に洗い出すチェックリストと質問テンプレート。EARS記法・INVEST基準・定量NFR・前提/リスク台帳・画面横断仕様の先行確認</td><td>requirements</td></tr>
+    <tr><td><b>adr-writing</b></td><td>重要な技術決定をADR（Architecture Decision Record）として記録する手順。「捨てた選択肢とその理由」を残す</td><td>design</td></tr>
+    <tr><td><b>ui-design-mockup</b></td><td>画面を実装前に自己完結型HTMLモックアップで視覚化し、ユーザーの目視承認を得る手順。実際の動線からダイアログ等を開ける配線が必須</td><td>design</td></tr>
+    <tr><td><b>test-case-design</b></td><td>受け入れ条件からテストケースを網羅設計する観点（正常系/異常系/境界値/非機能）。E2Eブラウザ自動化の既知の落とし穴も収録</td><td>test</td></tr>
+    <tr><td><b>gate-check</b></td><td>GATE_STATUS の判定・更新手順。完了/エスカレーションの論理式、完了マークの規律（証拠必須）、横断整合監査、改修サイクルのゲート操作</td><td>全エージェント</td></tr>
+    <tr><td><b>request-routing</b></td><td>普通のチャットで受けた依頼を正しい入口（フェーズ/コマンド）へ振り分ける受付手順。冒頭で「分類/入口/影響」を宣言</td><td>全エージェント</td></tr>
+    <tr><td><b>change-request</b></td><td>運用中の変更依頼を差分駆動で処理する手順。4分類→影響範囲特定→該当フェーズだけ再ゲート→台帳記録</td><td>change</td></tr>
+  </table>
+  </div>
+</div></section>
+
+<section><div class="wrap">
+  <div class="sec-label">QUALITY & SECURITY</div>
+  <h2>品質・セキュリティ（2）</h2>
+  <div class="scroll">
+  <table>
+    <tr><th>スキル</th><th>何をするか</th><th>主に使うエージェント</th></tr>
+    <tr><td><b>security-review</b></td><td>8ステップのセキュリティ監査（インジェクション・認証認可・シークレット・依存脆弱性・データフロー）。GitHub公式スキル由来。リリース前必須</td><td>reviewer</td></tr>
+    <tr><td><b>mutation-verification</b></td><td>実装をわざと壊してテストが落ちることを実測する mutation 検証。テストの穴の検出（重要案件でオプトイン。Meta が大規模実運用する手法）</td><td>task-worker / test</td></tr>
+  </table>
+  </div>
+</div></section>
+
+<section><div class="wrap">
+  <div class="sec-label">RELEASE & ENVIRONMENT</div>
+  <h2>リリース・環境（4）</h2>
+  <p class="sec-desc">デプロイ環境のスキルは事前に全収録せず、<b>実際に判明した時点で作って育てる</b>のが方針です。2回目以降のリリースはスキルにより自動化されます。</p>
+  <div class="scroll">
+  <table>
+    <tr><th>スキル</th><th>何をするか</th><th>主に使うエージェント</th></tr>
+    <tr><td><b>skill-authoring</b></td><td>未知の環境・スタックに遭遇したときスキルを新規作成/公式スキルを取り込むメタスキル。外部スキル/MCPのサプライチェーン統制（出所確認・版固定・導入前レビュー）を含む</td><td>design / release</td></tr>
+    <tr><td><b>deploy-local-npx</b></td><td>ホスティング先を持たないローカル完結アプリ（CLI・npx実行形式）のリリース手順テンプレート</td><td>release</td></tr>
+    <tr><td><b>deploy-local-zip</b></td><td>Gitタグ+ZIP配布で完結するアプリのリリース手順テンプレート（CI生成物の検査・ロールバック・更新経路を含む）</td><td>release</td></tr>
+    <tr><td><b>windows-shell-conventions</b></td><td>Windows + Git Bash + PowerShell 併用環境の既知の落とし穴集（CRLF事故・文字化け・パス・SIGPIPE等）。再発見の試行錯誤コストを繰り返さないための収録</td><td>実行系の全エージェント</td></tr>
+  </table>
+  </div>
+</div></section>
+
+<section><div class="wrap">
+  <div class="sec-label">SCALE & INTAKE</div>
+  <h2>規模・既存コード対応（2）</h2>
+  <div class="scroll">
+  <table>
+    <tr><th>スキル</th><th>何をするか</th><th>主に使うエージェント</th></tr>
+    <tr><td><b>large-scale-development</b></td><td>大規模案件（US30超・複数チーム）をシステム層+サブシステム層の2層に分割して回す構造とゲート運用。インターフェース契約（ICD）の変更管理</td><td>orchestrator / design</td></tr>
+    <tr><td><b>brownfield-intake</b></td><td>既存コードベースへのハーネス導入。as-is要件・アーキテクチャの逆起こし→整合検証→差分駆動の改修サイクルへ接続</td><td>requirements</td></tr>
+  </table>
+  </div>
+</div></section>
+
+<section><div class="wrap">
+  <div class="sec-label">GROWTH LOOP & MAINTENANCE</div>
+  <h2>成長ループ・本体保守（4）</h2>
+  <div class="scroll">
+  <table>
+    <tr><th>スキル</th><th>何をするか</th><th>主に使うエージェント</th></tr>
+    <tr><td><b>harness-retrospective</b></td><td>リリース後の振り返り手順。摩擦を分類し改善提案表を作る。learnings 棚卸しと de-scaffolding（不要になったガードを問う）を含む</td><td>orchestrator</td></tr>
+    <tr><td><b>harness-apply-retrospective</b></td><td>改善提案表をハーネス本体へ適用し DECISIONS.md に記録する手順（本体リポジトリ専用）</td><td>harness-maintainer</td></tr>
+    <tr><td><b>harness-sync</b></td><td>本体で適用済みの改善を個別プロジェクトのハーネスコピーへ逆同期する手順（sync-harness.py と併用）</td><td>orchestrator</td></tr>
+    <tr><td><b>harness-guide</b></td><td>ハーネス自体の使い方ガイド。「次に何をすればいい？」に答える</td><td>orchestrator</td></tr>
+  </table>
+  </div>
+  <div class="note">
+    <b>プロジェクトごとに増えるスキル:</b> <code>deploy-&lt;environment&gt;</code>（デプロイ先が判明した時点で作成）と
+    <code>stack-conventions</code>（技術スタック確定時に作成）は、各プロジェクトで動的に追加され、
+    汎用的なものは振り返りで本体へ還流されます。<b>ハーネスは使うたびにスキルが増えて賢くなります。</b>
+  </div>
+</div></section>
+
+<footer><div class="wrap">
+  <p><a href="overview.html">← 概要に戻る</a>　|　定義の実体: <code>.github/skills/*/SKILL.md</code>（正のレイヤ。<code>.claude/skills/</code> はポインタ）。</p>
+</div></footer>
+
+</body>
+</html>

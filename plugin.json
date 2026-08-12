@@ -1,0 +1,9 @@
+{
+  "name": "app-dev-harness",
+  "description": "要件定義→設計→実装→テスト→リリースを一気通貫でオーケストレーションするGitHub Copilot開発ハーネス",
+  "version": "0.1.0",
+  "agents": ".github/agents",
+  "skills": ".github/skills",
+  "hooks": ".github/hooks",
+  "commands": ".github/prompts"
+}

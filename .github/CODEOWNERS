@@ -1,0 +1,15 @@
+# ハーネス自体の運用ルールへの変更は、GitHub上のブランチ保護ルールで
+# 人間のレビュー承認を必須にすることを推奨する（CODEOWNERSはその設定と組み合わせて使う）。
+# 下記のユーザー名/チーム名は実際のプロジェクトに合わせて書き換えること。
+#
+# .github/agents/    @your-team
+# .github/hooks/     @your-team
+# .github/skills/    @your-team
+# AGENTS.md          @your-team
+# plugin.json         @your-team
+
+# 例(コメントアウトを外して使う):
+# /.github/agents/ @your-org/maintainers
+# /.github/hooks/  @your-org/maintainers
+# /AGENTS.md       @your-org/maintainers
+# /plugin.json     @your-org/maintainers

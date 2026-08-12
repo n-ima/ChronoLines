@@ -1,0 +1,19 @@
+{
+  // 既定の場所 (.github/agents, .github/prompts, .github/instructions, .github/skills, .github/hooks)
+  // はVS Codeが自動検出するため、通常はこの設定ファイルなしでも動作します。
+  // 下記はチーム共有の追加ロケーションを使いたくなった場合の例です（既定は false のまま）。
+  "chat.agentFilesLocations": {
+    ".github/agents": true
+  },
+  "chat.promptFilesLocations": {
+    ".github/prompts": true
+  },
+  "chat.instructionsFilesLocations": {
+    ".github/instructions": true
+  },
+  // Claude Code用スキルポインタ(.claude/skills)はCopilotにも探索されるため、
+  // 正(.github/skills)との二重読み込みを防ぐ
+  "chat.agentSkillsLocations": {
+    ".claude/skills": false
+  }
+}
