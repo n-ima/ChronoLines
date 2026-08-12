@@ -69,10 +69,14 @@
   - 証拠 (2026-08-12): query.test.ts 32/32 pass（上記全項目を網羅）・typecheck エラー0・
     npm test 160/160（デグレなし）。メモ: autoRange の「−99」は astro 軸で減算（0年回避）、
     名前/id 比較はロケール非依存のコードユニット順（決定性優先）
-- [ ] TASK-006: `src/server/storage.ts` — 原子的書き込みとバックアップ（tmp書き込み+fsync → .bak 1世代コピー → rename・データディレクトリ決定〔CHRONOLINES_DATA_DIR → %LOCALAPPDATA%\ChronoLines〕・破損ファイルの改名保全）+ 単体テスト
+- [x] TASK-006: `src/server/storage.ts` — 原子的書き込みとバックアップ（tmp書き込み+fsync → .bak 1世代コピー → rename・データディレクトリ決定〔CHRONOLINES_DATA_DIR → %LOCALAPPDATA%\ChronoLines〕・破損ファイルの改名保全）+ 単体テスト
   - 対応要件: US-009/010 / 対応設計: server-api.md 2章・4章、ADR 0002
   - 完了条件: 一時ディレクトリ（CHRONOLINES_DATA_DIR 指定)を使った Vitest で、初回生成・
     書き込み後の .bak 生成・rename 後の本体整合・corrupt 改名保全（chronolines.corrupt-*.json）が全パス
+  - 証拠 (2026-08-12): storage.test.ts 15/15 pass（初回生成・.bak 1世代・rename 整合・corrupt 改名保全を
+    mkdtemp 一時ディレクトリで実測）・typecheck エラー0・npm test 175/175。
+    メモ: corrupt 保全名の同一秒衝突は付番で回避（Windows rename の黙示上書き対策）。
+    移行前バックアップ（chronolines.v<旧版>.bak）は起動シーケンス側= TASK-007 の管轄として持ち越し
 - [ ] TASK-007: `src/server/index.ts` + `api.ts` — サーバー本体（起動シーケンス state=ok/corrupt/newer・GET/PUT /api/store〔直列化・Zod検証・rev楽観ロック・recovery〕・GET /api/health・静的配信+index.htmlフォールバック・127.0.0.1 固定・EADDRINUSE メッセージ・ボディ上限50MB）+ 統合テスト
   - 対応要件: US-009/010、NFR（外部送信なし） / 対応設計: server-api.md 全章
   - 完了条件: エフェメラルポート+一時データディレクトリで実サーバーを起動する Vitest で、
