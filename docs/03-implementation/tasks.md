@@ -35,10 +35,14 @@
   - 証拠 (2026-08-12): typecheck exit0・Vitest 1/1 pass・dev起動で 5173(Vite)/5177(server) 確認、
     curl で index.html 返却を確認後に停止。補足: server/index.ts は起動可能な最小スケルトンのみ
     （本実装は TASK-007）。typescript は最新v7でなく表どおり ^5 にピン
-- [ ] TASK-002: `src/domain/year.ts` — 年の表現と計算（StoredYear/AstroYear ブランド型・toAstro/fromAstro・compareStoredYears・ageAt・cellValue・formatYear・parseYearInput・decadeStart/decadeEnd/formatDecade）+ 単体テスト
+- [x] TASK-002: `src/domain/year.ts` — 年の表現と計算（StoredYear/AstroYear ブランド型・toAstro/fromAstro・compareStoredYears・ageAt・cellValue・formatYear・parseYearInput・decadeStart/decadeEnd/formatDecade）+ 単体テスト
   - 対応要件: US-002/005/007 / 対応設計: domain-logic.md 1章、ADR 0004
   - 完了条件: domain-logic.md の検算表9行・10年境界検算表8行・cellValue 判定規則4行・
     parseYearInput 仕様（前100/-100/1600/全角/空白/0年/±99999超）を網羅した Vitest が全パス
+  - 証拠 (2026-08-12): Vitest 48/48 pass（新規47件で検算表9行・境界表8行・判定規則4行・
+    parseYearInput 仕様を網羅、期待値は表から転記）・typecheck エラー0。
+    メモ: cellValue は Person でなく構造型 PersonLifespan を受ける（schema→year の依存方向のため。
+    Zod推論型のブランド付け方針は TASK-003 で決定）
 - [ ] TASK-003: `src/domain/schema.ts` — Zodスキーマと型（strictObject・yearSchema・person/event/timeline/store・superRefine の参照整合性5規則）+ 単体テスト
   - 対応要件: US-001/003/005/008/009 / 対応設計: data-model.md 2章・7章
   - 完了条件: 境界値表（data-model.md 7章）と参照整合性5規則（E-STORE-ACTIVE-MISSING /
