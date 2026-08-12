@@ -60,12 +60,15 @@
     detail は Zod issue 先頭5件+「ほか n 件」書式）・typecheck エラー0・npm test 128/128。
     メモ: 移行成功パス（migratedFrom 付与）は登録簿が空の現行では検証不能、
     移行追加時にテストを足す契約を migrate.ts コメントに明記
-- [ ] TASK-005: `src/domain/query.ts` — 行導出と範囲決定（sortedPersonIds・filterByTags・filterEventsByTags・allTags・searchPersons・autoRange・eventsByColumn）+ 単体テスト
+- [x] TASK-005: `src/domain/query.ts` — 行導出と範囲決定（sortedPersonIds・filterByTags・filterEventsByTags・allTags・searchPersons・autoRange・eventsByColumn）+ 単体テスト
   - 対応要件: US-003/006/008 / 対応設計: domain-logic.md 2章
   - 完了条件: 安定ソート（同年生まれは月日→名前→id、月日無指定は末尾）/ OR絞り込み
     （選択0個=全件・人物とイベント対称）/ allTags 和集合・出現順 / 検索の NFKC 正規化・
     空クエリ=ヒットなし / autoRange（0件時は現在年−99〜現在年・反転クランプ）/
     eventsByColumn（year/decade 集約・列内ソート順）を網羅した Vitest が全パス
+  - 証拠 (2026-08-12): query.test.ts 32/32 pass（上記全項目を網羅）・typecheck エラー0・
+    npm test 160/160（デグレなし）。メモ: autoRange の「−99」は astro 軸で減算（0年回避）、
+    名前/id 比較はロケール非依存のコードユニット順（決定性優先）
 - [ ] TASK-006: `src/server/storage.ts` — 原子的書き込みとバックアップ（tmp書き込み+fsync → .bak 1世代コピー → rename・データディレクトリ決定〔CHRONOLINES_DATA_DIR → %LOCALAPPDATA%\ChronoLines〕・破損ファイルの改名保全）+ 単体テスト
   - 対応要件: US-009/010 / 対応設計: server-api.md 2章・4章、ADR 0002
   - 完了条件: 一時ディレクトリ（CHRONOLINES_DATA_DIR 指定)を使った Vitest で、初回生成・
