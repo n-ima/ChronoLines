@@ -43,11 +43,15 @@
     parseYearInput 仕様を網羅、期待値は表から転記）・typecheck エラー0。
     メモ: cellValue は Person でなく構造型 PersonLifespan を受ける（schema→year の依存方向のため。
     Zod推論型のブランド付け方針は TASK-003 で決定）
-- [ ] TASK-003: `src/domain/schema.ts` — Zodスキーマと型（strictObject・yearSchema・person/event/timeline/store・superRefine の参照整合性5規則）+ 単体テスト
+- [x] TASK-003: `src/domain/schema.ts` — Zodスキーマと型（strictObject・yearSchema・person/event/timeline/store・superRefine の参照整合性5規則）+ 単体テスト
   - 対応要件: US-001/003/005/008/009 / 対応設計: data-model.md 2章・7章
   - 完了条件: 境界値表（data-model.md 7章）と参照整合性5規則（E-STORE-ACTIVE-MISSING /
     E-STORE-DUP-TIMELINE / E-STORE-DUP-ID / E-STORE-EVENT-ORPHAN / E-STORE-ORDER-MISMATCH）の
     正常・違反ケースを網羅した Vitest が全パス
+  - 証拠 (2026-08-12): schema.test.ts 60/60 pass（境界値表・5規則の正常/違反・複数違反同時報告を網羅）・
+    typecheck エラー0・npm test 108/108（デグレなし）。
+    メモ: ブランド付与は yearSchema 末尾の恒等 transform 1箇所に閉じ込め（z.brand は year.ts と
+    非互換のため不採用）。DUP-ID は persons/events の名前空間別で判定
 - [ ] TASK-004: `src/domain/migrate.ts` — loadStore と移行チェーン（migrations 登録簿〔現行空〕・LoadResult・判定手順5段階）+ 単体テスト
   - 対応要件: US-010 / 対応設計: data-model.md 5章
   - 完了条件: 正常v1 / JSONパース不能→CORRUPT / schemaVersion 欠落→CORRUPT /
