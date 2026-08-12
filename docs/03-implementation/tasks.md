@@ -90,10 +90,14 @@
 
 ## コア機能
 
-- [ ] TASK-101: デザイントークンとアプリシェル（`styles/tokens.css`〔design-tokens.md の写し・リテラル色をコンポーネントCSSに書かない〕・AppShell〔起動ロード中スピナー・GET失敗時の全画面接続エラー+再試行・ルートエラー境界=再読み込み+メモリ上データのJSON退避エクスポート〕・Toolbar の枠・GET /api/store によるストア初期ロード）
+- [x] TASK-101: デザイントークンとアプリシェル（`styles/tokens.css`〔design-tokens.md の写し・リテラル色をコンポーネントCSSに書かない〕・AppShell〔起動ロード中スピナー・GET失敗時の全画面接続エラー+再試行・ルートエラー境界=再読み込み+メモリ上データのJSON退避エクスポート〕・Toolbar の枠・GET /api/store によるストア初期ロード）
   - 対応要件: US-009、NFR / 対応設計: ui-timeline-grid.md 1章・9章、data-model.md 6章（エクスポート形式）
   - 完了条件: エクスポート形式生成関数の Vitest（format/exportedAt/appVersion/store）パス /
     実行時確認: dev 起動でロード→年表名が表示される。サーバー停止状態では接続エラー画面+再試行が出る
+  - 証拠 (2026-08-12): export.test.ts 10/10 pass・typecheck エラー0・npm test 210/210・
+    Playwright 機械確認で「年表1」表示と vite 単独起動時の接続エラー画面+再試行を確認。
+    メモ: GET 409 時は事実表示のみの読み取り専用画面（リカバリ本実装は TASK-203）。
+    アプリ版数は vite define __APP_VERSION__ で package.json から埋め込み
 - [ ] TASK-102: `store/appStore.ts` — Zustand ストアとミューテーション全12操作（addPerson/updatePerson・deletePerson〔deleteEvents/unlink の2ポリシー+personOrder除去〕・addEvent/updateEvent/deleteEvent・reorderPerson・setSortMode・addTimeline/renameTimeline/deleteTimeline/switchTimeline・setViewRange/setZoom・replaceStore・appendTimelines〔全id再採番+personId再マップ〕）+ 単体テスト
   - 対応要件: US-001/003/008/009/011 / 対応設計: data-model.md 3章・4章
   - 完了条件: 各ミューテーションの Vitest（特に deletePerson 2ポリシー・appendTimelines の

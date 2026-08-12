@@ -1,0 +1,12 @@
+/* アプリシェルの器（ui-timeline-grid.md 1章）: ツールバー + グリッド領域の縦積み */
+.shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.main {
+  flex: 1;
+  overflow: auto;
+  background: var(--color-bg);
+}

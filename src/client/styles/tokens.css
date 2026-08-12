@@ -1,0 +1,79 @@
+/*
+ * デザイントークン（正: docs/02-design/ui/design-tokens.md の写し）。
+ * トークン値はこのファイルにのみ定義し、色のリテラルをコンポーネントCSSに書かない
+ * （stack-conventions 規約6）。値を変えたいときは先に design-tokens.md を更新する。
+ */
+:root {
+  /* ===== 色 ===== */
+  --color-bg: #ffffff; /* ページ・グリッド地 */
+  --color-surface: #f9fafb; /* ツールバー・パネル地 */
+  --color-text: #1f2937; /* 基本テキスト */
+  --color-text-muted: #6b7280; /* 補助テキスト（生没年併記等） */
+  --color-border: #e5e7eb; /* 罫線 */
+  --color-border-strong: #9ca3af; /* 10年ガイド罫線 */
+  --color-alive-bg: #dbeafe; /* 生存セルの背景（補助チャネル） */
+  --color-alive-text: #1e40af; /* 生存セルの年齢数値 */
+  --color-alive-band: #3b82f6; /* 生存の帯（セル下端3px。識別の主チャネル） */
+  --color-virtual-bg: #f3f4f6; /* 仮想年齢セルの背景 */
+  --color-virtual-text: #4b5563; /* 仮想年齢の数値（括弧書式と併用） */
+  --color-virtual-band: #9ca3af; /* 仮想の帯 */
+  --color-chip-bg: #fde68a; /* イベントチップ背景 */
+  --color-chip-text: #713f12; /* イベントチップ文字 */
+  --color-selcol-bg: #fef3c7; /* 選択列のハイライト（空欄セル部分） */
+  --color-row-hilite: #fef08a; /* 検索ヒット行（人物列）の強調 */
+  --color-current-year: #dc2626; /* 現在年の縦罫線 */
+  --color-primary: #2563eb; /* 主ボタン・リンク */
+  --color-danger: #dc2626; /* 削除・エラー */
+  --color-error-bg: #fee2e2; /* エラーバナー背景 */
+
+  /* ===== タグ配色（8色パレット。割り当てはタグ名の文字列ハッシュ mod 8） ===== */
+  /* 0: blue */
+  --tag-0-bg: #dbeafe;
+  --tag-0-text: #1e40af;
+  --tag-0-dot: #3b82f6;
+  /* 1: green */
+  --tag-1-bg: #dcfce7;
+  --tag-1-text: #166534;
+  --tag-1-dot: #22c55e;
+  /* 2: amber */
+  --tag-2-bg: #fef3c7;
+  --tag-2-text: #92400e;
+  --tag-2-dot: #f59e0b;
+  /* 3: purple */
+  --tag-3-bg: #f3e8ff;
+  --tag-3-text: #6b21a8;
+  --tag-3-dot: #a855f7;
+  /* 4: pink */
+  --tag-4-bg: #fce7f3;
+  --tag-4-text: #9d174d;
+  --tag-4-dot: #ec4899;
+  /* 5: teal */
+  --tag-5-bg: #ccfbf1;
+  --tag-5-text: #115e59;
+  --tag-5-dot: #14b8a6;
+  /* 6: red */
+  --tag-6-bg: #fee2e2;
+  --tag-6-text: #991b1b;
+  --tag-6-dot: #ef4444;
+  /* 7: gray */
+  --tag-7-bg: #e5e7eb;
+  --tag-7-text: #374151;
+  --tag-7-dot: #6b7280;
+
+  /* ===== タイポグラフィ・寸法 ===== */
+  --font-family: 'Segoe UI', 'Yu Gothic UI', Meiryo, system-ui, sans-serif;
+  --font-size-base: 14px;
+  --font-size-small: 12px;
+  --font-size-cell: 12px;
+  --cell-w: 44px; /* 1年ズームの列幅 */
+  --cell-w-decade: 72px; /* 10年ズームの列幅 */
+  --cell-h: 28px; /* 行高 */
+  --name-col-w: 200px; /* 人物列幅 */
+  --radius: 4px;
+  --radius-lg: 8px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --event-lane-h: 56px; /* イベントレーン高（チップ2段） */
+}

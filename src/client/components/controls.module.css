@@ -1,0 +1,23 @@
+/* ボタンの共通規則（design-tokens.md「部品の共通規則」/ screen-01 .btn）。色はトークンのみ */
+.btn {
+  padding: 6px 12px;
+  border-radius: var(--radius);
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-bg);
+  color: var(--color-text);
+  cursor: pointer;
+  font-size: 13px; /* 寸法はモックアップ screen-01 のとおり */
+}
+
+.btn:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.btnPrimary {
+  composes: btn;
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  /* 主要ボタンは「primary塗り + 白文字」（design-tokens.md 部品の共通規則） */
+  color: #ffffff;
+}

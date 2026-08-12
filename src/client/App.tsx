@@ -1,8 +1,6 @@
+import { AppShell } from './components/AppShell';
+
+// アプリ本体はシェル（ロード状態切替・ルートエラー境界。ui-timeline-grid.md 1章・9章）に委譲する
 export function App() {
-  // TASK-001 時点の最小画面。アプリシェル（Toolbar・TimelineGrid 等)は TASK-101 以降で実装する。
-  return (
-    <main>
-      <h1>ChronoLines</h1>
-    </main>
-  );
+  return <AppShell />;
 }

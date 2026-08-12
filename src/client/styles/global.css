@@ -1,0 +1,25 @@
+/* 全体の土台スタイル（モックアップ screen-*.html の body 相当）。色・フォントはトークンのみ */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  font-family: var(--font-family);
+  font-size: var(--font-size-base);
+  color: var(--color-text);
+  background: var(--color-bg);
+}
+
+button,
+input,
+select {
+  font-family: inherit;
+}
