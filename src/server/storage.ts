@@ -79,6 +79,19 @@ export async function writeStoreFile(dataDir: string, store: Store): Promise<voi
   await fs.rename(tmpPath, storePath);
 }
 
+// 移行前バックアップ（server-api.md 2章の手順2）。移行後データで本体を書き戻す前に、
+// 元ファイル（旧スキーマ版）を chronolines.v<旧版>.bak へコピー保全する。
+// 設計はこの固定名を定めているため、同名が既にある場合は上書き = 「その旧版の最新状態を
+// 1世代残す」意味になる（.bak の1世代方針と同じ）。コピー先パスを返す（起動ログ用）。
+export async function backupBeforeMigration(
+  dataDir: string,
+  fromVersion: number,
+): Promise<string> {
+  const bakPath = path.join(dataDir, `chronolines.v${fromVersion}.bak`);
+  await fs.copyFile(storeFilePath(dataDir), bakPath);
+  return bakPath;
+}
+
 // 破損ファイルの改名保全（server-api.md 3章の手順5 / ADR 0002「黙って捨てない」）。
 // リカバリ書き込みの直前に呼び、読めなかった本体を chronolines.corrupt-<YYYYMMDD-HHmmss>.json
 // へ退避する。保全後のパスを返す（リカバリ画面での提示用）。

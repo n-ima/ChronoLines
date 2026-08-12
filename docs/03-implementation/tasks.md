@@ -77,12 +77,16 @@
     mkdtemp 一時ディレクトリで実測）・typecheck エラー0・npm test 175/175。
     メモ: corrupt 保全名の同一秒衝突は付番で回避（Windows rename の黙示上書き対策）。
     移行前バックアップ（chronolines.v<旧版>.bak）は起動シーケンス側= TASK-007 の管轄として持ち越し
-- [ ] TASK-007: `src/server/index.ts` + `api.ts` — サーバー本体（起動シーケンス state=ok/corrupt/newer・GET/PUT /api/store〔直列化・Zod検証・rev楽観ロック・recovery〕・GET /api/health・静的配信+index.htmlフォールバック・127.0.0.1 固定・EADDRINUSE メッセージ・ボディ上限50MB）+ 統合テスト
+- [x] TASK-007: `src/server/index.ts` + `api.ts` — サーバー本体（起動シーケンス state=ok/corrupt/newer・GET/PUT /api/store〔直列化・Zod検証・rev楽観ロック・recovery〕・GET /api/health・静的配信+index.htmlフォールバック・127.0.0.1 固定・EADDRINUSE メッセージ・ボディ上限50MB）+ 統合テスト
   - 対応要件: US-009/010、NFR（外部送信なし） / 対応設計: server-api.md 全章
   - 完了条件: エフェメラルポート+一時データディレクトリで実サーバーを起動する Vitest で、
     server-api.md 3章の状態×操作の表（ok/corrupt/newer × GET/PUT、rev不一致→E-REV-CONFLICT、
     recovery時のrev照合スキップと改名保全、検証失敗→E-VALIDATION）が全パス /
     実行時確認: `npm run dev` 起動後 `curl http://localhost:5177/api/health` が state:"ok" を返す
+  - 証拠 (2026-08-12): server-api.test.ts 25/25 pass（状態×操作の表・直列化・50MB・recovery 保全を
+    実サーバー起動で実測）・typecheck エラー0・npm test 200/200・/api/health が state:"ok" を返却。
+    メモ: 移行前バックアップ backupBeforeMigration を storage.ts へ追加（TASK-006 持ち越し解消）。
+    /api/health の appVersion は package.json の version を正とする（二重管理回避）
 
 ## コア機能
 
