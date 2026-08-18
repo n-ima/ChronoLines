@@ -46,3 +46,14 @@
   color: var(--color-text-muted);
   margin: 8px 0;
 }
+
+/* インポートエラーの折りたたみ詳細（screen-03 の details: margin-top 8px・12px・muted） */
+.detail {
+  margin-top: 8px;
+  font-size: var(--font-size-small);
+  color: var(--color-text-muted);
+}
+
+.detail summary {
+  cursor: pointer;
+}

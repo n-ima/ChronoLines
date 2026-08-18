@@ -50,7 +50,13 @@ export function loadStore(raw: string): LoadResult {
     const summary = error instanceof Error ? error.message : String(error);
     return { ok: false, code: 'CORRUPT', detail: `JSONとして解釈できません: ${summary}` };
   }
+  return judgeStoreData(parsed);
+}
 
+// パース済みの値に対する判定手順2〜5（loadStore の後半）。インポート（domain/import.ts）が
+// エクスポート形式ラッパーの store 部分に同じ版判定・移行・厳密検証を適用するために分離
+// （data-model.md 6章「インポート時も loadStore 相当の判定を行う」を文字どおり同じ実装で満たす）
+export function judgeStoreData(parsed: unknown): LoadResult {
   // 2. schemaVersion が整数で取れない → CORRUPT
   const fileVersion = readSchemaVersion(parsed);
   if (fileVersion === undefined) {
