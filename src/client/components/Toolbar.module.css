@@ -64,6 +64,113 @@
   white-space: nowrap;
 }
 
+/* タグ絞り込み（screen-01 .tag-dd-wrap / .tag-dd）。寸法はモックアップのとおり */
+.tagWrap {
+  position: relative;
+}
+
+.tagDd {
+  position: absolute;
+  top: 36px;
+  left: 0;
+  z-index: 20;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-dropdown);
+  padding: var(--space-2);
+  width: 260px;
+}
+
+.tagDdRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 5px 6px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.tagDdRow:hover {
+  background: var(--color-surface);
+}
+
+.tagDdDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.tagDdCount {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+.tagDdEmpty {
+  font-size: var(--font-size-small);
+  color: var(--color-text-muted);
+  padding: 5px 6px;
+}
+
+.tagDdFoot {
+  border-top: 1px solid var(--color-border);
+  margin-top: 6px;
+  padding-top: 6px;
+  text-align: right;
+}
+
+.tagDdClear {
+  border: 0;
+  background: none;
+  color: var(--color-primary);
+  font-size: var(--font-size-small);
+  cursor: pointer;
+}
+
+/* 適用中の色付きピル（screen-01 .active-tags / .tag-pill。実色はインラインのトークン参照） */
+.activeTags {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.tagPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border-radius: 999px;
+  font-size: var(--font-size-small);
+  padding: 2px 10px;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.tagPillDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.tagPillX {
+  border: 0;
+  background: none;
+  color: inherit;
+  padding: 0;
+  cursor: pointer;
+  opacity: 0.6;
+  margin-left: 2px;
+  font-size: 11px;
+}
+
+.tagPillX:hover {
+  opacity: 1;
+}
+
 .range {
   display: flex;
   align-items: center;

@@ -34,6 +34,7 @@ import {
   type SearchState,
 } from './searchModel';
 import screen from './statusScreen.module.css';
+import { removeTag, retainKnownTags, toggleTag, visibleRowIds } from './tagFilterModel';
 import { TimelineGrid, type SearchScrollRequest } from './TimelineGrid';
 import { Toolbar } from './Toolbar';
 
@@ -145,25 +146,51 @@ function ReadyContent() {
   const [searchScroll, setSearchScroll] = useState<SearchScrollRequest | null>(null);
   const activeTimeline =
     store === null ? undefined : store.timelines.find((t) => t.id === store.activeTimelineId);
+
+  // タグ絞り込み（TASK-110）。選択集合は Toolbar（ドロップダウン・ピル）と TimelineGrid
+  //（行・イベントレーン）と検索（表示行に対して照合）で共有するためここに持つ。
+  // 保存データには含めない（view にタグ選択のフィールドは無い = セッション限りのUI状態）
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const handleToggleTag = useCallback(
+    (tag: string) => setSelectedTags((prev) => toggleTag(prev, tag)),
+    [],
+  );
+  const handleRemoveTag = useCallback(
+    (tag: string) => setSelectedTags((prev) => removeTag(prev, tag)),
+    [],
+  );
+  const handleClearTags = useCallback(() => setSelectedTags([]), []);
+  // データ変化への追従: 年表から消えたタグは選択からも外す（tagFilterModel.retainKnownTags）
+  useEffect(() => {
+    if (activeTimeline === undefined) {
+      return;
+    }
+    setSelectedTags((prev) => retainKnownTags(prev, activeTimeline));
+  }, [activeTimeline]);
   const bumpSearchScroll = useCallback((personId: string) => {
     // seq は単調増加トークン: 同じ人物へのスクロール要求（n=1件で〔次へ〕等)も再発火させる
     setSearchScroll((prev) => ({ personId, seq: (prev?.seq ?? 0) + 1 }));
   }, []);
   // クエリ確定（Toolbar の150msデバウンス後）: ヒット集合を計算し先頭ヒットへスクロール。
-  // ヒット0件・空クエリはスクロール要求を出さない（行・スクロール位置とも不変の受け入れ条件）
+  // ヒット0件・空クエリはスクロール要求を出さない（行・スクロール位置とも不変の受け入れ条件）。
+  // 照合対象はタグ絞り込み後の表示行（persons → sort → tagFilter → 表示行。domain-logic.md 2章）
   const handleSearchQuery = useCallback(
     (query: string) => {
       if (activeTimeline === undefined) {
         return;
       }
-      const next = applyQuery(sortedPersonIds(activeTimeline), activeTimeline.persons, query);
+      const next = applyQuery(
+        visibleRowIds(activeTimeline, selectedTags),
+        activeTimeline.persons,
+        query,
+      );
       setSearch(next);
       const hit = currentHit(next);
       if (hit !== null) {
         bumpSearchScroll(hit);
       }
     },
-    [activeTimeline, bumpSearchScroll],
+    [activeTimeline, selectedTags, bumpSearchScroll],
   );
   // 〔前へ/次へ〕: カーソルを巡回させ、そのヒット行へスクロール
   const handleSearchStep = useCallback(
@@ -177,8 +204,8 @@ function ReadyContent() {
     },
     [search, bumpSearchScroll],
   );
-  // データ・並び順の変化にヒット集合を追従させる（改名・削除・並び替えで強調のズレを残さない。
-  // スクロールは要求しない = ユーザー操作起点のときだけ動かす）
+  // データ・並び順・タグ絞り込みの変化にヒット集合を追従させる（改名・削除・並び替え・
+  // 絞り込みで強調のズレを残さない。スクロールは要求しない = ユーザー操作起点のときだけ動かす）
   useEffect(() => {
     if (activeTimeline === undefined) {
       return;
@@ -186,9 +213,9 @@ function ReadyContent() {
     setSearch((prev) =>
       prev.query === ''
         ? prev
-        : refreshHits(prev, sortedPersonIds(activeTimeline), activeTimeline.persons),
+        : refreshHits(prev, visibleRowIds(activeTimeline, selectedTags), activeTimeline.persons),
     );
-  }, [activeTimeline]);
+  }, [activeTimeline, selectedTags]);
 
   if (store === null) {
     // initializeStore 後にのみ描画されるため通常到達しない。到達したら不整合なので
@@ -267,6 +294,10 @@ function ReadyContent() {
         search={search}
         onSearchQuery={handleSearchQuery}
         onSearchStep={handleSearchStep}
+        selectedTags={selectedTags}
+        onToggleTag={handleToggleTag}
+        onRemoveTag={handleRemoveTag}
+        onClearTags={handleClearTags}
       />
       {/* 保存失敗の常設バナーはグリッド上部全幅（design-tokens.md 部品の共通規則） */}
       <SaveErrorBanner />
@@ -274,6 +305,7 @@ function ReadyContent() {
       <main className={styles.main} aria-label="年表グリッド">
         <TimelineGrid
           timeline={active}
+          filterTags={selectedTags}
           searchHitIds={search.hits}
           searchScroll={searchScroll}
           onEditPerson={openEditPerson}

@@ -19,13 +19,14 @@ import {
   type ReactNode,
 } from 'react';
 
-import { eventsByColumn, sortedPersonIds } from '../../domain/query';
+import { eventsByColumn } from '../../domain/query';
 import type { Person, Timeline } from '../../domain/schema';
 import { cellValue, formatYear, type StoredYear } from '../../domain/year';
 import { tagDotColor } from '../tagColor';
 import { hasOpenDialog } from './Dialog';
 import { chipColors, chipTooltip, eventsAtYear, laneColumn } from './selectionModel';
 import { SidePanel } from './SidePanel';
+import { visibleEvents, visibleRowIds } from './tagFilterModel';
 import styles from './TimelineGrid.module.css';
 import {
   CELL_H,
@@ -233,6 +234,7 @@ export type SearchScrollRequest = { personId: string; seq: number };
 
 export function TimelineGrid({
   timeline,
+  filterTags,
   searchHitIds,
   searchScroll,
   onEditPerson,
@@ -242,6 +244,9 @@ export function TimelineGrid({
   onDeleteEvent,
 }: {
   timeline: Timeline;
+  // タグ絞り込みの選択集合（TASK-110）。OR条件で行（人物）とイベントレーンの両方に適用する。
+  // 選択0個 = 全件（domain/query.ts filterByTags / filterEventsByTags）
+  filterTags: string[];
   // 検索ヒット行の person id（表示行順。強調表示に使う。TASK-109）。
   // 検索は絞り込みではないため行の集合・順序には影響しない（ui-timeline-grid.md 6章）
   searchHitIds: readonly string[];
@@ -295,24 +300,24 @@ export function TimelineGrid({
   // （年またぎの瞬間の追随は要件にない）
   const currentYear = useMemo(() => new Date().getFullYear() as StoredYear, []);
 
-  // 表示行 = 並び替え済み人物の配列（導出は domain/query.ts。ADR 0003）。
-  // タグ絞り込み（filterByTags）は TASK-110 でこのパイプラインに挿入する
+  // 表示行 = 並び替え + タグ絞り込み済み人物の配列（persons → sort → tagFilter → 表示行。
+  // domain-logic.md 2章のパイプライン。導出は domain/query.ts。ADR 0003 / TASK-110）
   const persons = useMemo(() => {
     const byId = new Map(timeline.persons.map((p) => [p.id, p]));
-    return sortedPersonIds(timeline).flatMap((id) => {
+    return visibleRowIds(timeline, filterTags).flatMap((id) => {
       const person = byId.get(id);
       return person === undefined ? [] : [person];
     });
-  }, [timeline]);
+  }, [timeline, filterTags]);
 
   const zoom = timeline.view.zoom;
   const columns = useMemo(() => gridColumns(timeline, currentYear), [timeline, currentYear]);
 
   // イベントの列集計（キー = astro 年（1年）/ decadeStart（10年）。列内は月日→名前順。
-  // domain/query.ts）。タグ絞り込み（filterEventsByTags）は TASK-110 でこの入力に挿入する
+  // domain/query.ts）。入力はタグ絞り込み後のイベント（人物と対称の OR 条件。TASK-110）
   const eventColumns = useMemo(
-    () => eventsByColumn(timeline.events, zoom),
-    [timeline.events, zoom],
+    () => eventsByColumn(visibleEvents(timeline.events, filterTags), zoom),
+    [timeline.events, filterTags, zoom],
   );
 
   const rowVirtualizer = useVirtualizer({

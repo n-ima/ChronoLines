@@ -22,6 +22,8 @@
 | --color-chip-bg | #FDE68A | イベントチップ背景 |
 | --color-chip-text | #713F12 | イベントチップ文字 |
 | --color-selcol-bg | #FEF3C7 | 選択列のハイライト（空欄セル部分） |
+| --color-selcol-edge | #F59E0B | 選択列のインセット罫線（screen-01 のリテラルを転記。TASK-107） |
+| --color-more-badge-bg | #FCD34D | イベントレーン「+N」バッジ背景（screen-01 のリテラルを転記。TASK-107） |
 | --color-row-hilite | #FEF08A | 検索ヒット行（人物列）の強調 |
 | --color-current-year | #DC2626 | 現在年の縦罫線 |
 | --color-primary | #2563EB | 主ボタン・リンク |
@@ -87,6 +89,8 @@
 
 - ボタン: 主要 = primary塗り + 白文字、通常 = 白地 + border、危険 = danger塗り + 白文字。
 - ダイアログ: 中央モーダル・オーバーレイ rgba(0,0,0,.4)・radius-lg・幅 480px（フォーム系）。
+- ドロップダウン（タグ▼等）: 白地 + border-strong + radius-lg・影 0 6px 20px rgba(0,0,0,.15)
+  （--shadow-dropdown。screen-01 .tag-dd のリテラルを転記。TASK-110）。
 - インラインエラー: danger色 12px、フィールド直下。
 - バナー: グリッド上部全幅。エラー = error-bg、情報 = selcol-bg。
 - テーマは1つ（ライト）に固定する（個人利用ローカルアプリ。ダークテーマは作らない）。

@@ -1,13 +1,15 @@
 // ツールバーの枠（TASK-101）+ 保存状態表示（TASK-103）+ 〔＋人物〕（TASK-105）+
-// 〔＋イベント〕（TASK-106）+ ズームトグル〔1年|10年〕（TASK-108）+ 人物検索（TASK-109）。
+// 〔＋イベント〕（TASK-106）+ ズームトグル〔1年|10年〕（TASK-108）+ 人物検索（TASK-109）+
+// タグ絞り込み〔タグ▼〕（TASK-110）。
 // 構成・見た目は screen-01-main-grid.html のとおり。
 // 残るコントロールの配線は後続タスクの管轄:
-// 年表切替=TASK-113、タグ=TASK-110、並び順=TASK-111、範囲=TASK-112、
+// 年表切替=TASK-113、並び順=TASK-111、範囲=TASK-112、
 // 入出力=TASK-201/202、
 // 画像出力=TASK-204。それまでは disabled の枠として置く（表示値はストアの実データを反映する）。
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 
 import type { Store, Timeline } from '../../domain/schema';
+import { tagDotColor, tagPillColors } from '../tagColor';
 import { useAppStore } from '../store/appStore';
 import { useSaveStore } from '../store/autosave';
 import controls from './controls.module.css';
@@ -17,6 +19,7 @@ import {
   SEARCH_DEBOUNCE_MS,
   type SearchState,
 } from './searchModel';
+import { tagButtonLabel, tagFilterOptions } from './tagFilterModel';
 import styles from './Toolbar.module.css';
 
 // 保存状態（ツールバー右端。screen-01/-04 の save-state）: 通常時は「保存済み HH:mm:ss」、
@@ -119,6 +122,112 @@ function SearchBox({
   );
 }
 
+// タグ絞り込み（TASK-110 / ui-timeline-grid.md 6章 / screen-01 .tag-dd-wrap / .tag-dd）。
+// ドロップダウンの開閉だけをローカルに持ち、選択集合は AppShell（グリッドの行・イベント
+// レーン・検索と共有）が持つ。チェックのトグルでは閉じない（複数選択の連続操作のため。
+// 閉じるのはボタン再クリックとドロップダウン外クリック = screen-01 と同じ）
+function TagFilterDropdown({
+  timeline,
+  selected,
+  onToggle,
+  onClear,
+}: {
+  timeline: Timeline;
+  selected: string[];
+  onToggle: (tag: string) => void;
+  onClear: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!open) {
+      return undefined;
+    }
+    const onDocMouseDown = (event: MouseEvent) => {
+      const wrap = wrapRef.current;
+      if (wrap !== null && event.target instanceof Node && !wrap.contains(event.target)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', onDocMouseDown);
+    return () => document.removeEventListener('mousedown', onDocMouseDown);
+  }, [open]);
+  const options = tagFilterOptions(timeline);
+  return (
+    <div className={styles.tagWrap} ref={wrapRef}>
+      <button
+        type="button"
+        className={controls.btn}
+        aria-haspopup="true"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+      >
+        {tagButtonLabel(selected)}
+      </button>
+      {open && (
+        <div className={styles.tagDd} role="group" aria-label="タグで絞り込み" data-testid="tag-dd">
+          {options.length === 0 ? (
+            // 登録タグ0個のときの空表示はモックアップに無い（判断: 空のパネルは壊れて見える
+            // ため TagPicker と同じ流儀の説明文を置く）
+            <div className={styles.tagDdEmpty}>登録済みのタグはありません</div>
+          ) : (
+            options.map(({ tag, personCount, eventCount }) => (
+              <label key={tag} className={styles.tagDdRow}>
+                <input
+                  type="checkbox"
+                  checked={selected.includes(tag)}
+                  onChange={() => onToggle(tag)}
+                />
+                <span className={styles.tagDdDot} style={{ background: tagDotColor(tag) }} />
+                {tag}
+                <span className={styles.tagDdCount}>
+                  人物{personCount}・イベント{eventCount}
+                </span>
+              </label>
+            ))
+          )}
+          <div className={styles.tagDdFoot}>
+            <button type="button" className={styles.tagDdClear} onClick={onClear}>
+              すべて解除
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// 適用中の色付きピル（screen-01 .active-tags / .tag-pill）。各ピルの ✕ で個別解除
+function ActiveTagPills({
+  selected,
+  onRemove,
+}: {
+  selected: string[];
+  onRemove: (tag: string) => void;
+}) {
+  if (selected.length === 0) {
+    return null;
+  }
+  return (
+    <div className={styles.activeTags} data-testid="active-tags">
+      {selected.map((tag) => (
+        <span key={tag} className={styles.tagPill} style={tagPillColors(tag)}>
+          <span className={styles.tagPillDot} style={{ background: tagDotColor(tag) }} />
+          {tag}
+          <button
+            type="button"
+            className={styles.tagPillX}
+            aria-label={`タグ「${tag}」の絞り込みを解除`}
+            onClick={() => onRemove(tag)}
+          >
+            ✕
+          </button>
+        </span>
+      ))}
+    </div>
+  );
+}
+
 // ズームトグル（US-007）。選択中の側の再クリックは何もしない
 // （無変更の setZoom で自動保存のデバウンスを起こさないため）
 function setZoomIfChanged(active: Timeline, zoom: Timeline['view']['zoom']): void {
@@ -134,6 +243,10 @@ export function Toolbar({
   search,
   onSearchQuery,
   onSearchStep,
+  selectedTags,
+  onToggleTag,
+  onRemoveTag,
+  onClearTags,
 }: {
   store: Store;
   // 〔＋人物〕→ 人物フォーム（新規）を開く（TASK-105。ダイアログの状態は AppShell が持つ）
@@ -144,6 +257,12 @@ export function Toolbar({
   search: SearchState;
   onSearchQuery: (query: string) => void;
   onSearchStep: (direction: 1 | -1) => void;
+  // タグ絞り込み（TASK-110）。選択集合はグリッドの行・イベントレーン・検索と共有するため
+  // AppShell が持つ（ドロップダウンの開閉だけがツールバーのローカル状態）
+  selectedTags: string[];
+  onToggleTag: (tag: string) => void;
+  onRemoveTag: (tag: string) => void;
+  onClearTags: () => void;
 }) {
   const active = store.timelines.find((t) => t.id === store.activeTimelineId);
   if (active === undefined) {
@@ -161,9 +280,13 @@ export function Toolbar({
         ))}
       </select>
       <SearchBox search={search} onQuery={onSearchQuery} onStep={onSearchStep} />
-      <button type="button" className={controls.btn} disabled>
-        タグ ▼
-      </button>
+      <TagFilterDropdown
+        timeline={active}
+        selected={selectedTags}
+        onToggle={onToggleTag}
+        onClear={onClearTags}
+      />
+      <ActiveTagPills selected={selectedTags} onRemove={onRemoveTag} />
       <select className={styles.select} aria-label="並び順" value={active.sortMode} disabled>
         <option value="birthAsc">並び順: 生年順</option>
         <option value="manual">並び順: 手動</option>

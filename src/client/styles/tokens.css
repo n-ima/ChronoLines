@@ -28,6 +28,7 @@
   --color-danger: #dc2626; /* 削除・エラー */
   --color-error-bg: #fee2e2; /* エラーバナー背景 */
   --color-overlay: rgba(0, 0, 0, 0.4); /* ダイアログのオーバーレイ（design-tokens.md 部品の共通規則） */
+  --shadow-dropdown: 0 6px 20px rgba(0, 0, 0, 0.15); /* ドロップダウンの影（screen-01 .tag-dd のリテラルを転記。TASK-110） */
 
   /* ===== タグ配色（8色パレット。割り当てはタグ名の文字列ハッシュ mod 8） ===== */
   /* 0: blue */
