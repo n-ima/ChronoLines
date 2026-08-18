@@ -36,3 +36,18 @@ export function addTag(assigned: string[], input: string): string[] {
 export function removeTag(assigned: string[], tag: string): string[] {
   return assigned.filter((t) => t !== tag);
 }
+
+// フォーム送信時の防御的正規化（trim・空除去・重複除去）。通常は addTag が同じ規則で
+// 保証するため変化しない（人物・イベントフォーム共通。TASK-105/106）
+export function normalizeTags(tags: string[]): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const raw of tags) {
+    const tag = raw.trim();
+    if (tag !== '' && !seen.has(tag)) {
+      seen.add(tag);
+      result.push(tag);
+    }
+  }
+  return result;
+}

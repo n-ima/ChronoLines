@@ -5,14 +5,22 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { z } from 'zod';
 
-import { allTags } from '../../domain/query';
+import { allTags, sortedPersonIds } from '../../domain/query';
 import type { Store } from '../../domain/schema';
-import { useAppStore, type DeletePersonEventPolicy, type PersonInput } from '../store/appStore';
+import type { StoredYear } from '../../domain/year';
+import {
+  useAppStore,
+  type DeletePersonEventPolicy,
+  type PersonInput,
+  type TimelineEventInput,
+} from '../store/appStore';
 import { startAutosave, storeResponseSchema } from '../store/autosave';
 import styles from './AppShell.module.css';
 import { ConflictDialog } from './ConflictDialog';
 import controls from './controls.module.css';
+import { DeleteEventDialog } from './DeleteEventDialog';
 import { DeletePersonDialog } from './DeletePersonDialog';
+import { EventFormDialog } from './EventFormDialog';
 import { PersonFormDialog } from './PersonFormDialog';
 import { personalEventsOf } from './personFormModel';
 import { RootErrorBoundary } from './RootErrorBoundary';
@@ -78,18 +86,48 @@ async function fetchInitialStore(): Promise<FetchResult> {
 // ストアから引き直す（生年編集の反映などでフォームと表示の正が食い違わないように）
 type PersonDialogState = { mode: 'add' } | { mode: 'edit'; personId: string };
 
+// イベントフォームの表示状態（TASK-106）。add の initialYear は年ヘッダー右クリック
+// 〔この年にイベント追加〕の年初期値（null = 空欄）。edit はサイドパネル〔編集〕（TASK-107）と
+// DEV用フックから開く（フォーム本体は経路非依存）
+type EventDialogState =
+  | { mode: 'add'; initialYear: StoredYear | null }
+  | { mode: 'edit'; eventId: string };
+
 // ready フェーズの中身。appStore を購読し、以後のミューテーションが表示へ反映される
 function ReadyContent() {
   const store = useAppStore((s) => s.store);
   // ダイアログの状態（フックは早期 throw より前に置く）
   const [personDialog, setPersonDialog] = useState<PersonDialogState | null>(null);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [eventDialog, setEventDialog] = useState<EventDialogState | null>(null);
+  const [deleteEventId, setDeleteEventId] = useState<string | null>(null);
   const openAddPerson = useCallback(() => setPersonDialog({ mode: 'add' }), []);
   const openEditPerson = useCallback(
     (personId: string) => setPersonDialog({ mode: 'edit', personId }),
     [],
   );
   const openDeletePerson = useCallback((personId: string) => setDeleteTargetId(personId), []);
+  const openAddEvent = useCallback(() => setEventDialog({ mode: 'add', initialYear: null }), []);
+  const openAddEventAtYear = useCallback(
+    (year: StoredYear) => setEventDialog({ mode: 'add', initialYear: year }),
+    [],
+  );
+  // サイドパネル〔編集〕（TASK-107）が使う呼び出し口。TASK-107 実装まで UI からの経路は
+  // 無いため、DEV時のみ機械確認（Playwright）用に window へ露出する（main.tsx の
+  // __chronolines と同じ流儀。本番ビルドには含まれない）
+  const openEditEvent = useCallback(
+    (eventId: string) => setEventDialog({ mode: 'edit', eventId }),
+    [],
+  );
+  useEffect(() => {
+    if (import.meta.env.DEV) {
+      (window as unknown as Record<string, unknown>)['__chronolinesUi'] = { openEditEvent };
+      return () => {
+        delete (window as unknown as Record<string, unknown>)['__chronolinesUi'];
+      };
+    }
+    return undefined;
+  }, [openEditEvent]);
 
   if (store === null) {
     // initializeStore 後にのみ描画されるため通常到達しない。到達したら不整合なので
@@ -109,6 +147,19 @@ function ReadyContent() {
       : null;
   const deleteTarget =
     deleteTargetId === null ? null : (active.persons.find((p) => p.id === deleteTargetId) ?? null);
+  const editingEvent =
+    eventDialog?.mode === 'edit'
+      ? (active.events.find((e) => e.id === eventDialog.eventId) ?? null)
+      : null;
+  const deleteEventTarget =
+    deleteEventId === null ? null : (active.events.find((e) => e.id === deleteEventId) ?? null);
+
+  // 人物への紐付けの選択肢はグリッドの行順（生年順/手動順）で出す
+  const personsById = new Map(active.persons.map((p) => [p.id, p]));
+  const sortedPersons = sortedPersonIds(active).flatMap((id) => {
+    const person = personsById.get(id);
+    return person === undefined ? [] : [person];
+  });
 
   const handleSavePerson = (input: PersonInput) => {
     if (personDialog?.mode === 'edit') {
@@ -128,9 +179,27 @@ function ReadyContent() {
     setPersonDialog(null);
   };
 
+  const handleSaveEvent = (input: TimelineEventInput) => {
+    if (eventDialog?.mode === 'edit') {
+      useAppStore.getState().updateEvent(eventDialog.eventId, input);
+    } else {
+      useAppStore.getState().addEvent(input);
+    }
+    setEventDialog(null);
+  };
+
+  const handleDeleteEvent = () => {
+    if (deleteEventId !== null) {
+      useAppStore.getState().deleteEvent(deleteEventId);
+    }
+    setDeleteEventId(null);
+    // フォーム内〔削除...〕経由で開いていた場合は、消えたイベントのフォームも閉じる
+    setEventDialog(null);
+  };
+
   return (
     <div className={styles.shell}>
-      <Toolbar store={store} onAddPerson={openAddPerson} />
+      <Toolbar store={store} onAddPerson={openAddPerson} onAddEvent={openAddEvent} />
       {/* 保存失敗の常設バナーはグリッド上部全幅（design-tokens.md 部品の共通規則） */}
       <SaveErrorBanner />
       {/* main はグリッド + サイドパネル（TASK-107）の横並びの器（screen-01 .main） */}
@@ -139,6 +208,7 @@ function ReadyContent() {
           timeline={active}
           onEditPerson={openEditPerson}
           onDeletePerson={openDeletePerson}
+          onAddEventAtYear={openAddEventAtYear}
         />
       </main>
       {personDialog !== null && (personDialog.mode === 'add' || editingPerson !== null) && (
@@ -160,6 +230,28 @@ function ReadyContent() {
           personalEvents={personalEventsOf(active, deleteTarget.id)}
           onDelete={handleDeletePerson}
           onClose={() => setDeleteTargetId(null)}
+        />
+      )}
+      {eventDialog !== null && (eventDialog.mode === 'add' || editingEvent !== null) && (
+        <EventFormDialog
+          // 開くたびに初期値から作り直す（別イベントの編集へ切り替わったとき状態を残さない）
+          key={eventDialog.mode === 'edit' ? eventDialog.eventId : 'add'}
+          event={editingEvent}
+          initialYear={eventDialog.mode === 'add' ? eventDialog.initialYear : null}
+          persons={sortedPersons}
+          registeredTags={allTags(active)}
+          onSave={handleSaveEvent}
+          onRequestDelete={
+            eventDialog.mode === 'edit' ? () => setDeleteEventId(eventDialog.eventId) : null
+          }
+          onClose={() => setEventDialog(null)}
+        />
+      )}
+      {deleteEventTarget !== null && (
+        <DeleteEventDialog
+          event={deleteEventTarget}
+          onDelete={handleDeleteEvent}
+          onClose={() => setDeleteEventId(null)}
         />
       )}
       <ConflictDialog />

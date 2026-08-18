@@ -4,6 +4,7 @@
 import type { Person, Timeline, TimelineEvent } from '../../domain/schema';
 import { compareStoredYears, formatYear, parseYearInput, type StoredYear } from '../../domain/year';
 import type { PersonInput } from '../store/appStore';
+import { normalizeTags } from './tagPickerModel';
 
 // フォームの入力状態。select（月・日）は '' = 未指定、'1'〜'12' / '1'〜'31'。
 // 年はテキスト（「1543」「前100」「-100」を受理。ui-forms-dialogs.md 1章）
@@ -69,20 +70,6 @@ export function personToFormValues(person: Person): PersonFormValues {
     deathDay: person.death?.day === undefined ? '' : String(person.death.day),
     tags: [...person.tags],
   };
-}
-
-// タグの防御的正規化（trim・空除去・重複除去）。通常は TagPicker が同じ規則で保証する
-function normalizeTags(tags: string[]): string[] {
-  const seen = new Set<string>();
-  const result: string[] = [];
-  for (const raw of tags) {
-    const tag = raw.trim();
-    if (tag !== '' && !seen.has(tag)) {
-      seen.add(tag);
-      result.push(tag);
-    }
-  }
-  return result;
 }
 
 // blur・送信時の検証（ui-forms-dialogs.md 1章のエラーIDカタログ）。

@@ -5,7 +5,7 @@
 // イベントレーン・選択列・サイドパネル（TASK-107）は年ヘッダー直下・グリッド右に、
 // 10年ズーム（TASK-108）は列軸の置き換えとして差し込む構成とし、ここでは作らない。
 import { useVirtualizer, type VirtualItem } from '@tanstack/react-virtual';
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
 import { sortedPersonIds } from '../../domain/query';
 import type { Person, Timeline } from '../../domain/schema';
@@ -40,22 +40,26 @@ function columnRuleClass(year: StoredYear, currentYear: StoredYear): string {
   return isDecadeGuideYear(year) ? ` ${styles.guideCol}` : '';
 }
 
-// 行メニュー（人物列の行クリックで開く。ui-forms-dialogs.md 1章「行メニュー〔編集〕〔削除〕」）
+// コンテキストメニューの共通枠（人物行の行メニューと年ヘッダー右クリックメニューで共用。
+// Esc/メニュー外クリックで閉じる・画面端でのはみ出しクランプ）
 type RowMenuState = { personId: string; x: number; y: number };
+type YearMenuState = { year: StoredYear; x: number; y: number };
 
-const ROW_MENU_W = 160; // 画面端でのはみ出しクランプ用（.rowMenu の min-width と同値）
-const ROW_MENU_H = 80;
+const MENU_W = 200; // 画面端でのはみ出しクランプ用（.rowMenu の min-width より広めの概算値）
+const MENU_H = 80;
 
-function RowMenu({
-  menu,
-  onEdit,
-  onDelete,
+function ContextMenu({
+  x,
+  y,
+  ariaLabel,
   onClose,
+  children,
 }: {
-  menu: RowMenuState;
-  onEdit: () => void;
-  onDelete: () => void;
+  x: number;
+  y: number;
+  ariaLabel: string;
   onClose: () => void;
+  children: ReactNode;
 }) {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -66,8 +70,8 @@ function RowMenu({
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
   }, [onClose]);
-  const left = Math.max(0, Math.min(menu.x, window.innerWidth - ROW_MENU_W));
-  const top = Math.max(0, Math.min(menu.y, window.innerHeight - ROW_MENU_H));
+  const left = Math.max(0, Math.min(x, window.innerWidth - MENU_W));
+  const top = Math.max(0, Math.min(y, window.innerHeight - MENU_H));
   return (
     // 透明バックドロップ: メニュー外クリックで閉じる（クリックは下の要素へ通さない）
     <div className={styles.menuBackdrop} onMouseDown={onClose}>
@@ -75,20 +79,10 @@ function RowMenu({
         className={styles.rowMenu}
         style={{ left, top }}
         role="menu"
-        aria-label="人物メニュー"
+        aria-label={ariaLabel}
         onMouseDown={(event) => event.stopPropagation()}
       >
-        <button type="button" role="menuitem" className={styles.menuItem} onClick={onEdit}>
-          編集
-        </button>
-        <button
-          type="button"
-          role="menuitem"
-          className={`${styles.menuItem} ${styles.menuItemDanger}`}
-          onClick={onDelete}
-        >
-          削除
-        </button>
+        {children}
       </div>
     </div>
   );
@@ -174,20 +168,27 @@ export function TimelineGrid({
   timeline,
   onEditPerson,
   onDeletePerson,
+  onAddEventAtYear,
 }: {
   timeline: Timeline;
   // 行メニューの〔編集〕〔削除〕。ダイアログの状態は AppShell（ReadyContent）が持つ
   onEditPerson: (personId: string) => void;
   onDeletePerson: (personId: string) => void;
+  // 年ヘッダー右クリック〔この年にイベント追加〕→ イベントフォーム（年を初期値に。TASK-106）
+  onAddEventAtYear: (year: StoredYear) => void;
 }) {
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const [menu, setMenu] = useState<RowMenuState | null>(null);
+  const [yearMenu, setYearMenu] = useState<YearMenuState | null>(null);
   // GridRow は memo 化されているため、行へ渡すコールバックは安定参照にする
   const openMenu = useCallback((personId: string, x: number, y: number) => {
     setMenu({ personId, x, y });
   }, []);
   const closeMenu = useCallback(() => {
     setMenu(null);
+  }, []);
+  const closeYearMenu = useCallback(() => {
+    setYearMenu(null);
   }, []);
 
   // 現在年 = 実行時のシステム日付の年（glossary.md「現在年」）。セッション中は固定でよい
@@ -246,6 +247,11 @@ export function TimelineGrid({
                 className={`${styles.yearCell}${columnRuleClass(year, currentYear)}`}
                 style={{ left: NAME_COL_W + col.start, width: col.size }}
                 data-year={year}
+                onContextMenu={(event) => {
+                  // 右クリック〔この年にイベント追加〕（ui-forms-dialogs.md 2章）
+                  event.preventDefault();
+                  setYearMenu({ year, x: event.clientX, y: event.clientY });
+                }}
               >
                 {formatYear(year)}
               </div>
@@ -273,18 +279,45 @@ export function TimelineGrid({
         </div>
       </div>
       {menu !== null && (
-        <RowMenu
-          menu={menu}
-          onClose={closeMenu}
-          onEdit={() => {
-            setMenu(null);
-            onEditPerson(menu.personId);
-          }}
-          onDelete={() => {
-            setMenu(null);
-            onDeletePerson(menu.personId);
-          }}
-        />
+        <ContextMenu x={menu.x} y={menu.y} ariaLabel="人物メニュー" onClose={closeMenu}>
+          <button
+            type="button"
+            role="menuitem"
+            className={styles.menuItem}
+            onClick={() => {
+              setMenu(null);
+              onEditPerson(menu.personId);
+            }}
+          >
+            編集
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            className={`${styles.menuItem} ${styles.menuItemDanger}`}
+            onClick={() => {
+              setMenu(null);
+              onDeletePerson(menu.personId);
+            }}
+          >
+            削除
+          </button>
+        </ContextMenu>
+      )}
+      {yearMenu !== null && (
+        <ContextMenu x={yearMenu.x} y={yearMenu.y} ariaLabel="年メニュー" onClose={closeYearMenu}>
+          <button
+            type="button"
+            role="menuitem"
+            className={styles.menuItem}
+            onClick={() => {
+              setYearMenu(null);
+              onAddEventAtYear(yearMenu.year);
+            }}
+          >
+            この年にイベント追加
+          </button>
+        </ContextMenu>
       )}
     </div>
   );
