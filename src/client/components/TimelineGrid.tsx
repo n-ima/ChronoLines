@@ -23,6 +23,7 @@ import {
 import { eventsByColumn, sortedPersonIds } from '../../domain/query';
 import type { Person, Timeline } from '../../domain/schema';
 import { cellValue, formatYear, type StoredYear } from '../../domain/year';
+import { captureContentProps, captureRootProps, captureStickyProps } from '../imageExportModel';
 import { useAppStore } from '../store/appStore';
 import { tagDotColor } from '../tagColor';
 import { hasOpenDialog } from './Dialog';
@@ -158,6 +159,7 @@ const GridRow = memo(function GridRow({
       <div
         className={`${styles.nameCell}${searchHit ? ` ${styles.nameCellHit}` : ''}`}
         style={{ width: NAME_COL_W }}
+        {...captureStickyProps('x')}
         data-search-hit={searchHit ? 'true' : undefined}
         title={personTooltip(person)}
         role="button"
@@ -508,16 +510,19 @@ export function TimelineGrid({
       ref={scrollRef}
       className={styles.scroll}
       data-testid="timeline-grid"
+      // 画像出力（TASK-204）のキャプチャ対象マーキング。sticky 要素の補正軸も同様に
+      // captureStickyProps で付与する（imageExport.captureGridPng がクローン内で参照）
+      {...captureRootProps}
       onScroll={(event) => {
         // ズーム切替時に「切替前の scrollLeft」を参照するための追跡（layout effect 参照）
         scrollLeftRef.current = event.currentTarget.scrollLeft;
       }}
     >
-      <div className={styles.inner} style={{ width: totalWidth }}>
+      <div className={styles.inner} style={{ width: totalWidth }} {...captureContentProps}>
         {/* 年ヘッダー（上に sticky）。クリックで列選択（ui-timeline-grid.md 3章）。
             10年ズームの見出しは "1600〜" 形式・罫線ガイドなし（screen-02） */}
-        <div className={styles.yearHeader} style={{ height: YEAR_HEADER_H }}>
-          <div className={styles.cornerCell} style={{ width: NAME_COL_W }}>
+        <div className={styles.yearHeader} style={{ height: YEAR_HEADER_H }} {...captureStickyProps('y')}>
+          <div className={styles.cornerCell} style={{ width: NAME_COL_W }} {...captureStickyProps('x')}>
             人物
           </div>
           {virtualCols.map((col) => {
@@ -568,8 +573,9 @@ export function TimelineGrid({
             top: YEAR_HEADER_H,
           }}
           data-testid="event-lane"
+          {...captureStickyProps('y')}
         >
-          <div className={styles.laneCorner} style={{ width: NAME_COL_W }}>
+          <div className={styles.laneCorner} style={{ width: NAME_COL_W }} {...captureStickyProps('x')}>
             イベント
           </div>
           {virtualCols.map((col) => {

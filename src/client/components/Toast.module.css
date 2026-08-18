@@ -1,0 +1,18 @@
+/* 失敗トースト（TASK-204）。画面下部中央に重ねて表示し、操作をブロックしない。
+   色は tokens.css のトークンのみ（モックアップに図例が無いためエラーバナー配色で補完） */
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  z-index: 100; /* ダイアログ(overlay)・コンテキストメニュー(50)より前面 */
+  background: var(--color-error-bg);
+  color: var(--color-danger);
+  border: 1px solid var(--color-danger);
+  border-radius: var(--radius);
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--font-size-base);
+  box-shadow: var(--shadow-dropdown);
+  pointer-events: none; /* 表示中も下の操作を妨げない（自動で消えるだけの通知） */
+}

@@ -25,6 +25,12 @@ import { DeleteTimelineDialog } from './DeleteTimelineDialog';
 import { EventFormDialog } from './EventFormDialog';
 import { IoDialog } from './IoDialog';
 import { PersonFormDialog } from './PersonFormDialog';
+import { captureGridPng, downloadDataUrl } from '../imageExport';
+import {
+  CAPTURE_ROOT_ATTR,
+  IMAGE_EXPORT_FAILED_MESSAGE,
+  imageExportFileName,
+} from '../imageExportModel';
 import { personalEventsOf } from './personFormModel';
 import { RangeBanner } from './RangeBanner';
 import { isTimelineEmpty } from './rangeModel';
@@ -43,6 +49,7 @@ import screen from './statusScreen.module.css';
 import { removeTag, retainKnownTags, toggleTag, visibleRowIds } from './tagFilterModel';
 import { TimelineGrid, type SearchScrollRequest } from './TimelineGrid';
 import { TimelineManagerDialog } from './TimelineManagerDialog';
+import { Toast } from './Toast';
 import { Toolbar } from './Toolbar';
 
 // 409 応答（E-STORE-CORRUPT / E-STORE-NEWER）のうち表示に使う部分だけ読む
@@ -123,6 +130,10 @@ function ReadyContent() {
   // 入出力ダイアログ（TASK-201: エクスポート。インポートタブは TASK-202）
   const [ioDialogOpen, setIoDialogOpen] = useState(false);
   const openIo = useCallback(() => setIoDialogOpen(true), []);
+  // 画像出力の失敗トースト（TASK-204 / ui-timeline-grid.md 8章。失敗はトーストのみで
+  // 通知し、アプリ状態には波及させない）
+  const [toast, setToast] = useState<string | null>(null);
+  const dismissToast = useCallback(() => setToast(null), []);
   const openTimelineManager = useCallback(() => setTimelineManagerOpen(true), []);
   const openDeleteTimeline = useCallback(
     (timelineId: string) => setDeleteTimelineId(timelineId),
@@ -313,6 +324,26 @@ function ReadyContent() {
     setEventDialog(null);
   };
 
+  // 〔画像出力〕（TASK-204）: 表示中のグリッドの可視範囲を PNG としてダウンロードする。
+  // グリッド要素は TimelineGrid が CAPTURE_ROOT_ATTR でマーキングした要素を引く
+  // （空状態ではボタンが disabled のため通常ここで見つからないことはない）。
+  // 失敗時はトーストのみ = 例外を UI 状態・保存データへ波及させない
+  const handleExportImage = () => {
+    const root = document.querySelector(`[${CAPTURE_ROOT_ATTR}]`);
+    if (!(root instanceof HTMLElement)) {
+      setToast(IMAGE_EXPORT_FAILED_MESSAGE);
+      return;
+    }
+    const fileName = imageExportFileName(active.name, new Date());
+    void captureGridPng(root)
+      .then((dataUrl) => downloadDataUrl(fileName, dataUrl))
+      .catch((cause: unknown) => {
+        // 原因はトーストに出さない（設計の文言固定）。診断用にコンソールへだけ残す
+        console.error('画像出力に失敗しました', cause);
+        setToast(IMAGE_EXPORT_FAILED_MESSAGE);
+      });
+  };
+
   const handleDeleteTimeline = () => {
     if (deleteTimelineId !== null) {
       // 最後の1つの削除 → 空の「年表1」自動作成もこの中で行われる（appStore の契約）
@@ -330,6 +361,7 @@ function ReadyContent() {
         onAddPerson={openAddPerson}
         onAddEvent={openAddEvent}
         onOpenIo={openIo}
+        onExportImage={handleExportImage}
         search={search}
         onSearchQuery={handleSearchQuery}
         onSearchStep={handleSearchStep}
@@ -434,6 +466,7 @@ function ReadyContent() {
         />
       )}
       <ConflictDialog />
+      {toast !== null && <Toast message={toast} onDismiss={dismissToast} />}
     </div>
   );
 }

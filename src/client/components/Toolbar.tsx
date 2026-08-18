@@ -2,10 +2,8 @@
 // 〔＋イベント〕（TASK-106）+ ズームトグル〔1年|10年〕（TASK-108）+ 人物検索（TASK-109）+
 // タグ絞り込み〔タグ▼〕（TASK-110）+ 並び順〔生年順|手動〕（TASK-111）+
 // 表示範囲〔開始年〕〔終了年〕（TASK-112）+ 年表切替ドロップダウン（TASK-113）+
-// 〔入出力〕（TASK-201）。
+// 〔入出力〕（TASK-201）+ 〔画像出力〕（TASK-204）。
 // 構成・見た目は screen-01-main-grid.html のとおり。
-// 残るコントロールの配線は後続タスクの管轄:
-// 画像出力=TASK-204。それまでは disabled の枠として置く（表示値はストアの実データを反映する）。
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 
 import type { Store, Timeline } from '../../domain/schema';
@@ -16,6 +14,7 @@ import { useSaveStore } from '../store/autosave';
 import controls from './controls.module.css';
 import {
   RANGE_ERROR_MESSAGES,
+  isTimelineEmpty,
   parseRangeInputs,
   rangeInputValues,
   rangePlaceholders,
@@ -338,6 +337,7 @@ export function Toolbar({
   onAddPerson,
   onAddEvent,
   onOpenIo,
+  onExportImage,
   search,
   onSearchQuery,
   onSearchStep,
@@ -356,6 +356,9 @@ export function Toolbar({
   onAddEvent: () => void;
   // 〔入出力〕→ 入出力ダイアログを開く（TASK-201。ダイアログの状態は AppShell が持つ）
   onOpenIo: () => void;
+  // 〔画像出力〕→ 表示中のグリッドを PNG ダウンロード（TASK-204。キャプチャ・トーストは
+  // AppShell が持つ）
+  onExportImage: () => void;
   // 人物検索（TASK-109）。状態はグリッドの強調・スクロールと共有するため AppShell が持つ
   search: SearchState;
   onSearchQuery: (query: string) => void;
@@ -455,7 +458,14 @@ export function Toolbar({
       <button type="button" className={controls.btn} onClick={onOpenIo}>
         入出力
       </button>
-      <button type="button" className={controls.btn} disabled>
+      {/* 空の年表はグリッド自体が無く撮る対象が無いため disabled（TASK-204。
+          空状態では中央の空状態表示が出ている = ui-timeline-grid.md 7章） */}
+      <button
+        type="button"
+        className={controls.btn}
+        onClick={onExportImage}
+        disabled={isTimelineEmpty(active)}
+      >
         画像出力
       </button>
       <SaveStatus />
