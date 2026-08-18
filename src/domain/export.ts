@@ -26,3 +26,22 @@ export function buildExportPayload(
     store,
   };
 }
+
+// エクスポート範囲（ui-forms-dialogs.md 4章: 現在の年表のみ / すべての年表）
+export type ExportScope = 'current' | 'all';
+
+// 「現在の年表のみ」は timelines を表示中の1件に絞り、activeTimelineId をその年表の id に
+// 差し替える（絞った結果が E-STORE-ACTIVE-MISSING になる自己矛盾ファイルを生成しない。
+// data-model.md 6章）。'all' はストア全体をそのまま返す。
+export function storeForExportScope(store: Store, scope: ExportScope): Store {
+  if (scope === 'all') {
+    return store;
+  }
+  const active = store.timelines.find((t) => t.id === store.activeTimelineId);
+  if (active === undefined) {
+    // storeSchema の参照整合性（E-STORE-ACTIVE-MISSING）検証済みのため通常到達しない。
+    // 到達したら不整合なので、黙って壊れたファイルを吐かず明示的に失敗させる
+    throw new Error('E-STORE-ACTIVE-MISSING: activeTimelineId が timelines に存在しません');
+  }
+  return { ...store, activeTimelineId: active.id, timelines: [active] };
+}

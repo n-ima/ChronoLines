@@ -1,10 +1,10 @@
 // ツールバーの枠（TASK-101）+ 保存状態表示（TASK-103）+ 〔＋人物〕（TASK-105）+
 // 〔＋イベント〕（TASK-106）+ ズームトグル〔1年|10年〕（TASK-108）+ 人物検索（TASK-109）+
 // タグ絞り込み〔タグ▼〕（TASK-110）+ 並び順〔生年順|手動〕（TASK-111）+
-// 表示範囲〔開始年〕〔終了年〕（TASK-112）+ 年表切替ドロップダウン（TASK-113）。
+// 表示範囲〔開始年〕〔終了年〕（TASK-112）+ 年表切替ドロップダウン（TASK-113）+
+// 〔入出力〕（TASK-201）。
 // 構成・見た目は screen-01-main-grid.html のとおり。
 // 残るコントロールの配線は後続タスクの管轄:
-// 入出力=TASK-201/202、
 // 画像出力=TASK-204。それまでは disabled の枠として置く（表示値はストアの実データを反映する）。
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 
@@ -337,6 +337,7 @@ export function Toolbar({
   onManageTimelines,
   onAddPerson,
   onAddEvent,
+  onOpenIo,
   search,
   onSearchQuery,
   onSearchStep,
@@ -353,6 +354,8 @@ export function Toolbar({
   onAddPerson: () => void;
   // 〔＋イベント〕→ イベントフォーム（新規・年初期値なし）を開く（TASK-106）
   onAddEvent: () => void;
+  // 〔入出力〕→ 入出力ダイアログを開く（TASK-201。ダイアログの状態は AppShell が持つ）
+  onOpenIo: () => void;
   // 人物検索（TASK-109）。状態はグリッドの強調・スクロールと共有するため AppShell が持つ
   search: SearchState;
   onSearchQuery: (query: string) => void;
@@ -449,7 +452,7 @@ export function Toolbar({
       <button type="button" className={controls.btn} onClick={onAddEvent}>
         ＋イベント
       </button>
-      <button type="button" className={controls.btn} disabled>
+      <button type="button" className={controls.btn} onClick={onOpenIo}>
         入出力
       </button>
       <button type="button" className={controls.btn} disabled>

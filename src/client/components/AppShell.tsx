@@ -22,6 +22,7 @@ import { DeleteEventDialog } from './DeleteEventDialog';
 import { DeletePersonDialog } from './DeletePersonDialog';
 import { DeleteTimelineDialog } from './DeleteTimelineDialog';
 import { EventFormDialog } from './EventFormDialog';
+import { IoDialog } from './IoDialog';
 import { PersonFormDialog } from './PersonFormDialog';
 import { personalEventsOf } from './personFormModel';
 import { RangeBanner } from './RangeBanner';
@@ -117,6 +118,9 @@ function ReadyContent() {
   // 年表管理（TASK-113）: 管理ダイアログの開閉と、削除確認の対象年表
   const [timelineManagerOpen, setTimelineManagerOpen] = useState(false);
   const [deleteTimelineId, setDeleteTimelineId] = useState<string | null>(null);
+  // 入出力ダイアログ（TASK-201: エクスポート。インポートタブは TASK-202）
+  const [ioDialogOpen, setIoDialogOpen] = useState(false);
+  const openIo = useCallback(() => setIoDialogOpen(true), []);
   const openTimelineManager = useCallback(() => setTimelineManagerOpen(true), []);
   const openDeleteTimeline = useCallback(
     (timelineId: string) => setDeleteTimelineId(timelineId),
@@ -323,6 +327,7 @@ function ReadyContent() {
         onManageTimelines={openTimelineManager}
         onAddPerson={openAddPerson}
         onAddEvent={openAddEvent}
+        onOpenIo={openIo}
         search={search}
         onSearchQuery={handleSearchQuery}
         onSearchStep={handleSearchStep}
@@ -410,6 +415,7 @@ function ReadyContent() {
           onClose={() => setDeleteEventId(null)}
         />
       )}
+      {ioDialogOpen && <IoDialog store={store} onClose={() => setIoDialogOpen(false)} />}
       {timelineManagerOpen && (
         <TimelineManagerDialog
           store={store}
