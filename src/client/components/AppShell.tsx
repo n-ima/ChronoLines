@@ -112,13 +112,14 @@ function ReadyContent() {
     (year: StoredYear) => setEventDialog({ mode: 'add', initialYear: year }),
     [],
   );
-  // サイドパネル〔編集〕（TASK-107）が使う呼び出し口。TASK-107 実装まで UI からの経路は
-  // 無いため、DEV時のみ機械確認（Playwright）用に window へ露出する（main.tsx の
-  // __chronolines と同じ流儀。本番ビルドには含まれない）
+  // サイドパネルのイベント行〔編集〕〔削除〕（TASK-107）。DEV時の window 露出は
+  // 機械確認（Playwright）用に維持する（main.tsx の __chronolines と同じ流儀。
+  // 本番ビルドには含まれない）
   const openEditEvent = useCallback(
     (eventId: string) => setEventDialog({ mode: 'edit', eventId }),
     [],
   );
+  const openDeleteEvent = useCallback((eventId: string) => setDeleteEventId(eventId), []);
   useEffect(() => {
     if (import.meta.env.DEV) {
       (window as unknown as Record<string, unknown>)['__chronolinesUi'] = { openEditEvent };
@@ -202,13 +203,15 @@ function ReadyContent() {
       <Toolbar store={store} onAddPerson={openAddPerson} onAddEvent={openAddEvent} />
       {/* 保存失敗の常設バナーはグリッド上部全幅（design-tokens.md 部品の共通規則） */}
       <SaveErrorBanner />
-      {/* main はグリッド + サイドパネル（TASK-107）の横並びの器（screen-01 .main） */}
+      {/* main はグリッド + サイドパネルの横並びの器（screen-01 .main） */}
       <main className={styles.main} aria-label="年表グリッド">
         <TimelineGrid
           timeline={active}
           onEditPerson={openEditPerson}
           onDeletePerson={openDeletePerson}
           onAddEventAtYear={openAddEventAtYear}
+          onEditEvent={openEditEvent}
+          onDeleteEvent={openDeleteEvent}
         />
       </main>
       {personDialog !== null && (personDialog.mode === 'add' || editingPerson !== null) && (

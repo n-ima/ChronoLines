@@ -2,19 +2,24 @@
 // 行(人物)・列(年)に @tanstack/react-virtual の virtualizer を1つずつ使い、可視窓 +
 // オーバースキャン5 のセルだけを DOM に実体化する。セル値は描画時に cellValue で
 // 都度計算し、300万セル分の配列・キャッシュ・巨大 useMemo を作らない（ADR 0003）。
-// イベントレーン・選択列・サイドパネル（TASK-107）は年ヘッダー直下・グリッド右に、
+// イベントレーン・選択列・サイドパネル（TASK-107: ui-timeline-grid.md 3〜4章）も本体で持つ
+// （選択列の強調とパネルの年齢比較は行・列の状態を共有するため）。
 // 10年ズーム（TASK-108）は列軸の置き換えとして差し込む構成とし、ここでは作らない。
 import { useVirtualizer, type VirtualItem } from '@tanstack/react-virtual';
 import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
-import { sortedPersonIds } from '../../domain/query';
+import { eventsByColumn, sortedPersonIds } from '../../domain/query';
 import type { Person, Timeline } from '../../domain/schema';
 import { cellValue, formatYear, type StoredYear } from '../../domain/year';
 import { tagDotColor } from '../tagColor';
+import { hasOpenDialog } from './Dialog';
+import { chipColors, chipTooltip, eventsAtYear, laneColumn } from './selectionModel';
+import { SidePanel } from './SidePanel';
 import styles from './TimelineGrid.module.css';
 import {
   CELL_H,
   CELL_W,
+  EVENT_LANE_H,
   NAME_COL_W,
   OVERSCAN,
   YEAR_HEADER_H,
@@ -94,6 +99,8 @@ type GridRowProps = {
   columns: GridColumns;
   virtualCols: VirtualItem[];
   currentYear: StoredYear;
+  // 選択列（null = 未選択）。変更時は可視行だけが再レンダリングされる（memo 化の範囲）
+  selectedYear: StoredYear | null;
   onOpenMenu: (personId: string, x: number, y: number) => void;
 };
 
@@ -105,6 +112,7 @@ const GridRow = memo(function GridRow({
   columns,
   virtualCols,
   currentYear,
+  selectedYear,
   onOpenMenu,
 }: GridRowProps) {
   return (
@@ -147,10 +155,15 @@ const GridRow = memo(function GridRow({
         const tooltip = cellTooltip(person, year, value);
         const kindClass =
           value.kind === 'alive' ? ` ${styles.alive}` : value.kind === 'virtual' ? ` ${styles.virtual}` : '';
+        // 選択列の強調（ui-timeline-grid.md 4章）: 全セルに左右インセット罫線、空欄セルは背景も
+        const selClass =
+          year === selectedYear
+            ? ` ${styles.selcol}${value.kind === 'blank' ? ` ${styles.selcolBlank}` : ''}`
+            : '';
         return (
           <div
             key={col.key}
-            className={`${styles.cell}${kindClass}${columnRuleClass(year, currentYear)}`}
+            className={`${styles.cell}${kindClass}${selClass}${columnRuleClass(year, currentYear)}`}
             style={{ left: NAME_COL_W + col.start, width: col.size }}
             data-year={year}
             data-kind={value.kind}
@@ -169,6 +182,8 @@ export function TimelineGrid({
   onEditPerson,
   onDeletePerson,
   onAddEventAtYear,
+  onEditEvent,
+  onDeleteEvent,
 }: {
   timeline: Timeline;
   // 行メニューの〔編集〕〔削除〕。ダイアログの状態は AppShell（ReadyContent）が持つ
@@ -176,10 +191,15 @@ export function TimelineGrid({
   onDeletePerson: (personId: string) => void;
   // 年ヘッダー右クリック〔この年にイベント追加〕→ イベントフォーム（年を初期値に。TASK-106）
   onAddEventAtYear: (year: StoredYear) => void;
+  // サイドパネルのイベント行〔編集〕〔削除〕（TASK-107 → TASK-106 のフォーム/確認ダイアログ）
+  onEditEvent: (eventId: string) => void;
+  onDeleteEvent: (eventId: string) => void;
 }) {
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const [menu, setMenu] = useState<RowMenuState | null>(null);
   const [yearMenu, setYearMenu] = useState<YearMenuState | null>(null);
+  // 選択列（US-004）。チップ / +N バッジ / 年ヘッダーのクリックで設定、Esc / ✕ で解除
+  const [selectedYear, setSelectedYear] = useState<StoredYear | null>(null);
   // GridRow は memo 化されているため、行へ渡すコールバックは安定参照にする
   const openMenu = useCallback((personId: string, x: number, y: number) => {
     setMenu({ personId, x, y });
@@ -190,6 +210,24 @@ export function TimelineGrid({
   const closeYearMenu = useCallback(() => {
     setYearMenu(null);
   }, []);
+  const clearSelection = useCallback(() => {
+    setSelectedYear(null);
+  }, []);
+
+  // Esc で選択解除（ui-timeline-grid.md 4章）。ただしダイアログ・コンテキストメニューが
+  // 開いている間はそちらの Esc（最前面を閉じる）を優先し、選択は維持する
+  useEffect(() => {
+    if (selectedYear === null) {
+      return undefined;
+    }
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !hasOpenDialog() && menu === null && yearMenu === null) {
+        setSelectedYear(null);
+      }
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [selectedYear, menu, yearMenu]);
 
   // 現在年 = 実行時のシステム日付の年（glossary.md「現在年」）。セッション中は固定でよい
   // （年またぎの瞬間の追随は要件にない）
@@ -206,6 +244,10 @@ export function TimelineGrid({
   }, [timeline]);
 
   const columns = useMemo(() => gridColumns(timeline, currentYear), [timeline, currentYear]);
+
+  // イベントの列集計（キー = astro 年。列内は月日→名前順。domain/query.ts）。
+  // タグ絞り込み（filterEventsByTags）は TASK-110 でこの入力に挿入する
+  const eventColumns = useMemo(() => eventsByColumn(timeline.events, 'year'), [timeline.events]);
 
   const rowVirtualizer = useVirtualizer({
     count: persons.length,
@@ -231,22 +273,45 @@ export function TimelineGrid({
   // 人物列(200px)は仮想化の座標系の外（左に固定）。列座標は一律 NAME_COL_W だけずらす
   const totalWidth = NAME_COL_W + columnVirtualizer.getTotalSize();
 
+  // 年齢比較行クリック → その人物の行を可視範囲の中央へスクロール（ui-timeline-grid.md 4章）
+  const scrollToPerson = useCallback(
+    (personId: string) => {
+      const index = persons.findIndex((p) => p.id === personId);
+      if (index >= 0) {
+        rowVirtualizer.scrollToIndex(index, { align: 'center' });
+      }
+    },
+    [persons, rowVirtualizer],
+  );
+
   return (
+    <>
     <div ref={scrollRef} className={styles.scroll} data-testid="timeline-grid">
       <div className={styles.inner} style={{ width: totalWidth }}>
-        {/* 年ヘッダー（上に sticky）。イベントレーン（TASK-107）はこの直下に同じ sticky 構成で差し込む */}
+        {/* 年ヘッダー（上に sticky）。クリックで列選択（ui-timeline-grid.md 3章） */}
         <div className={styles.yearHeader} style={{ height: YEAR_HEADER_H }}>
           <div className={styles.cornerCell} style={{ width: NAME_COL_W }}>
             人物
           </div>
           {virtualCols.map((col) => {
             const year = columnYear(columns, col.index);
+            const selClass = year === selectedYear ? ` ${styles.yearCellSel}` : '';
             return (
               <div
                 key={col.key}
-                className={`${styles.yearCell}${columnRuleClass(year, currentYear)}`}
+                className={`${styles.yearCell}${selClass}${columnRuleClass(year, currentYear)}`}
                 style={{ left: NAME_COL_W + col.start, width: col.size }}
                 data-year={year}
+                role="button"
+                tabIndex={0}
+                aria-label={`${formatYear(year)}年の列を選択`}
+                onClick={() => setSelectedYear(year)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    setSelectedYear(year);
+                  }
+                }}
                 onContextMenu={(event) => {
                   // 右クリック〔この年にイベント追加〕（ui-forms-dialogs.md 2章）
                   event.preventDefault();
@@ -254,6 +319,55 @@ export function TimelineGrid({
                 }}
               >
                 {formatYear(year)}
+              </div>
+            );
+          })}
+        </div>
+        {/* イベントレーン（年ヘッダー直下に sticky。ui-timeline-grid.md 3章 / screen-01 .event-lane） */}
+        <div
+          className={styles.eventLane}
+          style={{ height: EVENT_LANE_H, top: YEAR_HEADER_H }}
+          data-testid="event-lane"
+        >
+          <div className={styles.laneCorner} style={{ width: NAME_COL_W }}>
+            イベント
+          </div>
+          {virtualCols.map((col) => {
+            const year = columnYear(columns, col.index);
+            const lane = laneColumn(eventColumns.get(columns.startAstro + col.index));
+            const selClass = year === selectedYear ? ` ${styles.evColSel}` : '';
+            return (
+              <div
+                key={col.key}
+                className={`${styles.evCol}${selClass}`}
+                style={{ left: NAME_COL_W + col.start, width: col.size }}
+                data-year={year}
+                role="button"
+                tabIndex={lane.chips.length > 0 ? 0 : -1}
+                aria-label={`${formatYear(year)}年のイベント列を選択`}
+                onClick={() => setSelectedYear(year)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    setSelectedYear(year);
+                  }
+                }}
+              >
+                {lane.chips.map((laneEvent) => (
+                  <div
+                    key={laneEvent.id}
+                    className={styles.chip}
+                    style={chipColors(laneEvent)}
+                    title={chipTooltip(laneEvent)}
+                    data-event-id={laneEvent.id}
+                  >
+                    {laneEvent.personId !== undefined && <span className={styles.pico}>👤</span>}
+                    {laneEvent.name}
+                  </div>
+                ))}
+                {lane.moreCount > 0 && (
+                  <div className={styles.moreBadge}>+{lane.moreCount}</div>
+                )}
               </div>
             );
           })}
@@ -272,6 +386,7 @@ export function TimelineGrid({
                 columns={columns}
                 virtualCols={virtualCols}
                 currentYear={currentYear}
+                selectedYear={selectedYear}
                 onOpenMenu={openMenu}
               />
             );
@@ -320,5 +435,21 @@ export function TimelineGrid({
         </ContextMenu>
       )}
     </div>
+    {/* サイドパネルはグリッドの右に横並び（AppShell の .main が flex の器。screen-01 .main） */}
+    {selectedYear !== null && (
+      <SidePanel
+        // 年が変わったら展開状態ごと作り直す（前の年の展開を持ち越さない）
+        key={selectedYear}
+        year={selectedYear}
+        events={eventsAtYear(eventColumns, selectedYear)}
+        persons={persons}
+        currentYear={currentYear}
+        onClose={clearSelection}
+        onEditEvent={onEditEvent}
+        onDeleteEvent={onDeleteEvent}
+        onPersonClick={scrollToPerson}
+      />
+    )}
+    </>
   );
 }

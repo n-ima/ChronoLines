@@ -26,3 +26,4 @@ Windows環境の例: `- [YYYY-MM-DD] cwdのドライブレターが小文字(d:\
 
 - [2026-08-12] vite dev サーバーは IPv6(::1) で listen するため、Playwright の page.goto や curl での疎通確認は `127.0.0.1:5173` ではなく `localhost:5173` を使う（127.0.0.1 直指定だと接続拒否になる）
 - [2026-08-12] Git Bash から taskkill を使うときは引数変換を止めた上でスラッシュ1つ: `MSYS2_ARG_CONV_EXCL="*" taskkill /F /T /PID <pid>`（変換を止めずに `/F` だとパス変換で `F:/` に化け、変換を止めて `//F` だと literal `//F` のまま渡って「無効な引数」になる。2026-08-18 実測で訂正）
+- [2026-08-18] dev サーバーを spawn する Node 検証スクリプトの出力を `| tail` へパイプしない（dev ツリーがパイプのハンドルを継承し、スクリプト終了後も tail が EOF 待ちでハングに見える。出力はリダイレクトかファイル書き出しにし、後始末の taskkill は spawnSync で完了を待ってから process.exit する。残留 dev ツリーを taskkill すると滞留出力が flush される）

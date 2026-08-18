@@ -1,0 +1,150 @@
+/* イベント・年齢比較サイドパネル（screen-01-main-grid.html .side-panel/.sp-*）。
+   色はトークンのみ。パネル全体を overflow: auto にする（1年100件のイベントでも
+   スクロールで全件到達できる。ui-timeline-grid.md 3章） */
+
+.panel {
+  width: 300px;
+  min-width: 300px;
+  border-left: 1px solid var(--color-border);
+  background: var(--color-surface);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.title {
+  font-size: 16px;
+}
+
+.close {
+  border: 0;
+  background: none;
+  font-size: 16px;
+  cursor: pointer;
+  color: var(--color-text-muted);
+}
+
+.sec {
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.secTitle {
+  font-size: var(--font-size-small);
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-2);
+  font-weight: 600;
+}
+
+/* ===== イベント行（screen-01 .sp-event。クリックで展開） ===== */
+.event {
+  padding: 6px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-bg);
+  margin-bottom: 6px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.meta {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  display: flex;
+  gap: 6px;
+  margin-top: 3px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* 個人イベントの人物名バッジ（screen-01 .p-badge） */
+.pBadge {
+  background: var(--color-alive-bg);
+  color: var(--color-alive-text);
+  border-radius: 8px;
+  padding: 0 8px;
+  font-size: 11px;
+}
+
+/* タグの色付きピル（design-tokens.md タグ配色。実色はインラインのトークン参照） */
+.tagPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border-radius: 999px;
+  font-size: var(--font-size-small);
+  padding: 2px 10px;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.tagDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+}
+
+/* 展開時のメモ全文（改行を保持して表示） */
+.note {
+  margin-top: 6px;
+  font-size: var(--font-size-small);
+  color: var(--color-text);
+  white-space: pre-wrap;
+}
+
+.actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+  justify-content: flex-end;
+}
+
+.btnSmall {
+  padding: 2px 10px;
+  font-size: var(--font-size-small);
+}
+
+.btnDangerText {
+  color: var(--color-danger);
+}
+
+.empty {
+  font-size: var(--font-size-small);
+  color: var(--color-text-muted);
+}
+
+/* ===== 年齢比較リスト（screen-01 .sp-age-row/.age-val。セルと同じ色書式） ===== */
+.ageRow {
+  display: flex;
+  justify-content: space-between;
+  padding: 3px 8px;
+  font-size: 13px;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.ageRow:hover {
+  background: var(--color-selcol-bg);
+}
+
+.ageAlive {
+  color: var(--color-alive-text);
+  font-weight: 600;
+}
+
+.ageVirtual {
+  color: var(--color-virtual-text);
+}
+
+.ageBlank {
+  color: var(--color-text-muted);
+}

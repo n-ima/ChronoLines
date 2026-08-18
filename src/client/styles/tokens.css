@@ -20,6 +20,8 @@
   --color-chip-bg: #fde68a; /* イベントチップ背景 */
   --color-chip-text: #713f12; /* イベントチップ文字 */
   --color-selcol-bg: #fef3c7; /* 選択列のハイライト（空欄セル部分） */
+  --color-selcol-edge: #f59e0b; /* 選択列の左右インセット罫線（screen-01 .selcol の実色） */
+  --color-more-badge-bg: #fcd34d; /* イベントレーン「+N」バッジ背景（screen-01 .more-badge の実色） */
   --color-row-hilite: #fef08a; /* 検索ヒット行（人物列）の強調 */
   --color-current-year: #dc2626; /* 現在年の縦罫線 */
   --color-primary: #2563eb; /* 主ボタン・リンク */

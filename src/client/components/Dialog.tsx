@@ -9,6 +9,12 @@ import styles from './dialog.module.css';
 // （人物フォームの上に削除確認が重なる構成のため。US-001）
 const dialogStack: symbol[] = [];
 
+// ダイアログが1つでも開いているか（TimelineGrid の Esc = 選択列解除が、開いている
+// ダイアログの Esc と衝突しないための判定。TASK-107）
+export function hasOpenDialog(): boolean {
+  return dialogStack.length > 0;
+}
+
 export function Dialog({
   title,
   onClose,

@@ -21,6 +21,7 @@ export const CELL_W = 44; // --cell-w（1年ズームの列幅）
 export const CELL_H = 28; // --cell-h（行高）
 export const NAME_COL_W = 200; // --name-col-w（人物列幅）
 export const YEAR_HEADER_H = 32; // screen-01 .year-header の高さ
+export const EVENT_LANE_H = 56; // --event-lane-h（イベントレーン高。チップ2段）
 export const OVERSCAN = 5; // 行・列とも（ui-timeline-grid.md 1章）
 
 // 列 index ↔ 年の対応。0年が存在しない StoredYear のままでは index が不連続になるため、

@@ -46,6 +46,88 @@
   font-size: 11px;
   color: var(--color-text-muted);
   border-right: 1px solid var(--color-border);
+  cursor: pointer;
+}
+
+/* 年ヘッダーのホバー・選択（screen-01 .yh:hover / .yh.selcol） */
+.yearCell:hover,
+.yearCellSel {
+  color: var(--color-text);
+  font-weight: 600;
+  background: var(--color-selcol-bg);
+}
+
+/* ===== イベントレーン（年ヘッダー直下に sticky。screen-01 .grid-row.event-lane） ===== */
+.eventLane {
+  position: sticky;
+  z-index: 3;
+  background: var(--color-bg);
+  border-bottom: 2px solid var(--color-border-strong);
+}
+
+.laneCorner {
+  position: sticky;
+  left: 0;
+  z-index: 4;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-2);
+  font-size: 11px;
+  color: var(--color-text-muted);
+  background: var(--color-surface);
+  border-right: 2px solid var(--color-border-strong);
+}
+
+/* レーンの1列（screen-01 .ev-col。チップ最大2 + +N バッジの縦積み） */
+.evCol {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 2px 1px;
+  border-right: 1px solid var(--color-border);
+  cursor: pointer;
+}
+
+.evCol:hover {
+  background: var(--color-selcol-bg);
+}
+
+.evColSel {
+  background: var(--color-selcol-bg);
+  box-shadow:
+    inset 2px 0 0 var(--color-selcol-edge),
+    inset -2px 0 0 var(--color-selcol-edge);
+}
+
+/* イベントチップ（screen-01 .chip。実色はタグ配色 or 既定アンバーをインラインで与える） */
+.chip {
+  border-radius: 3px;
+  font-size: 10px;
+  line-height: 1.2;
+  padding: 1px 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  background: var(--color-chip-bg);
+  color: var(--color-chip-text);
+}
+
+/* 個人イベントの人物アイコン（screen-01 .pico） */
+.pico {
+  font-size: 9px;
+}
+
+.moreBadge {
+  font-size: 10px;
+  color: var(--color-chip-text);
+  background: var(--color-more-badge-bg);
+  border-radius: 3px;
+  text-align: center;
+  padding: 1px 2px;
 }
 
 /* ===== 本体（行 = 人物。screen-01 .grid-row） ===== */
@@ -144,6 +226,18 @@
 
 .virtual::after {
   background: var(--color-virtual-band);
+}
+
+/* ===== 選択列の強調（ui-timeline-grid.md 4章 / screen-01 .selcol） ===== */
+.selcol {
+  box-shadow:
+    inset 2px 0 0 var(--color-selcol-edge),
+    inset -2px 0 0 var(--color-selcol-edge);
+}
+
+/* 空欄セルは選択列の背景ハイライトも付ける（alive/virtual は帯・背景を優先） */
+.selcolBlank {
+  background: var(--color-selcol-bg);
 }
 
 /* ===== 列の縦罫線の強調（年ヘッダー・セル共通。ui-timeline-grid.md 2章） ===== */
