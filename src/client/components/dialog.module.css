@@ -139,3 +139,13 @@
   font-size: 13px;
   color: var(--color-text-muted);
 }
+
+/* 警告ボックス（screen-03 .warn。年表削除の確認や取り込みエラー等の強い注意書き） */
+.warn {
+  background: var(--color-error-bg);
+  color: #7f1d1d; /* 文字色はモックアップ screen-03 .warn のとおり（SaveErrorBanner と同じ実色） */
+  border-radius: var(--radius);
+  padding: 8px 10px;
+  font-size: 13px;
+  margin-top: var(--space-2);
+}

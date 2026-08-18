@@ -1,0 +1,42 @@
+/* 年表管理ダイアログ（screen-03-forms.html の .tl-row / 新しい年表フィールド）。
+   色はトークンのみ。寸法はモックアップのとおり */
+
+.tlRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  margin-bottom: var(--space-2);
+}
+
+.meta {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}
+
+.grow {
+  flex: 1;
+}
+
+/* 名前変更のインライン入力（入力欄 + 直下エラーの器。モックアップに編集中状態の図例は
+   無いため、行内で入力欄が名前+メタの位置に広がる形で補完） */
+.renameBox {
+  flex: 1;
+}
+
+/* 〔＋新しい年表〕（screen-03 の margin-top:16px と flex:0 の作成ボタン列） */
+.newField {
+  margin-top: var(--space-4);
+  margin-bottom: 0;
+}
+
+.newRow {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.newBox {
+  flex: 1;
+}

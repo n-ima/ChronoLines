@@ -1,10 +1,9 @@
 // ツールバーの枠（TASK-101）+ 保存状態表示（TASK-103）+ 〔＋人物〕（TASK-105）+
 // 〔＋イベント〕（TASK-106）+ ズームトグル〔1年|10年〕（TASK-108）+ 人物検索（TASK-109）+
 // タグ絞り込み〔タグ▼〕（TASK-110）+ 並び順〔生年順|手動〕（TASK-111）+
-// 表示範囲〔開始年〕〔終了年〕（TASK-112）。
+// 表示範囲〔開始年〕〔終了年〕（TASK-112）+ 年表切替ドロップダウン（TASK-113）。
 // 構成・見た目は screen-01-main-grid.html のとおり。
 // 残るコントロールの配線は後続タスクの管轄:
-// 年表切替=TASK-113、
 // 入出力=TASK-201/202、
 // 画像出力=TASK-204。それまでは disabled の枠として置く（表示値はストアの実データを反映する）。
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
@@ -29,6 +28,7 @@ import {
   type SearchState,
 } from './searchModel';
 import { tagButtonLabel, tagFilterOptions } from './tagFilterModel';
+import { MANAGE_TIMELINES_VALUE } from './timelineManagerModel';
 import styles from './Toolbar.module.css';
 
 // 保存状態（ツールバー右端。screen-01/-04 の save-state）: 通常時は「保存済み HH:mm:ss」、
@@ -334,6 +334,7 @@ function setZoomIfChanged(active: Timeline, zoom: Timeline['view']['zoom']): voi
 
 export function Toolbar({
   store,
+  onManageTimelines,
   onAddPerson,
   onAddEvent,
   search,
@@ -345,6 +346,9 @@ export function Toolbar({
   onClearTags,
 }: {
   store: Store;
+  // 年表切替ドロップダウンの〔年表の管理...〕→ 管理ダイアログを開く（TASK-113。
+  // ダイアログの状態は他のダイアログと同じく AppShell が持つ）
+  onManageTimelines: () => void;
   // 〔＋人物〕→ 人物フォーム（新規）を開く（TASK-105。ダイアログの状態は AppShell が持つ）
   onAddPerson: () => void;
   // 〔＋イベント〕→ イベントフォーム（新規・年初期値なし）を開く（TASK-106）
@@ -368,12 +372,30 @@ export function Toolbar({
   }
   return (
     <header className={styles.toolbar}>
-      <select className={styles.select} aria-label="年表" value={store.activeTimelineId} disabled>
+      {/* 年表切替ドロップダウン（TASK-113 / ui-forms-dialogs.md 3章 / screen-01 #tl-select）。
+          切替（switchTimeline）は選択1クリックで完了する。末尾の〔年表の管理...〕は切替でなく
+          管理ダイアログを開く（controlled select のため表示値は activeTimelineId のまま戻る） */}
+      <select
+        className={styles.select}
+        aria-label="年表"
+        value={store.activeTimelineId}
+        onChange={(event) => {
+          const value = event.target.value;
+          if (value === MANAGE_TIMELINES_VALUE) {
+            onManageTimelines();
+            return;
+          }
+          if (value !== store.activeTimelineId) {
+            useAppStore.getState().switchTimeline(value);
+          }
+        }}
+      >
         {store.timelines.map((timeline) => (
           <option key={timeline.id} value={timeline.id}>
             {timeline.name}
           </option>
         ))}
+        <option value={MANAGE_TIMELINES_VALUE}>年表の管理...</option>
       </select>
       <SearchBox search={search} onQuery={onSearchQuery} onStep={onSearchStep} />
       <TagFilterDropdown

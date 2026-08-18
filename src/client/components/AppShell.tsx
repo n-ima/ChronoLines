@@ -20,6 +20,7 @@ import { ConflictDialog } from './ConflictDialog';
 import controls from './controls.module.css';
 import { DeleteEventDialog } from './DeleteEventDialog';
 import { DeletePersonDialog } from './DeletePersonDialog';
+import { DeleteTimelineDialog } from './DeleteTimelineDialog';
 import { EventFormDialog } from './EventFormDialog';
 import { PersonFormDialog } from './PersonFormDialog';
 import { personalEventsOf } from './personFormModel';
@@ -38,6 +39,7 @@ import {
 import screen from './statusScreen.module.css';
 import { removeTag, retainKnownTags, toggleTag, visibleRowIds } from './tagFilterModel';
 import { TimelineGrid, type SearchScrollRequest } from './TimelineGrid';
+import { TimelineManagerDialog } from './TimelineManagerDialog';
 import { Toolbar } from './Toolbar';
 
 // 409 応答（E-STORE-CORRUPT / E-STORE-NEWER）のうち表示に使う部分だけ読む
@@ -112,6 +114,14 @@ function ReadyContent() {
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [eventDialog, setEventDialog] = useState<EventDialogState | null>(null);
   const [deleteEventId, setDeleteEventId] = useState<string | null>(null);
+  // 年表管理（TASK-113）: 管理ダイアログの開閉と、削除確認の対象年表
+  const [timelineManagerOpen, setTimelineManagerOpen] = useState(false);
+  const [deleteTimelineId, setDeleteTimelineId] = useState<string | null>(null);
+  const openTimelineManager = useCallback(() => setTimelineManagerOpen(true), []);
+  const openDeleteTimeline = useCallback(
+    (timelineId: string) => setDeleteTimelineId(timelineId),
+    [],
+  );
   const openAddPerson = useCallback(() => setPersonDialog({ mode: 'add' }), []);
   const openEditPerson = useCallback(
     (personId: string) => setPersonDialog({ mode: 'edit', personId }),
@@ -247,6 +257,12 @@ function ReadyContent() {
       : null;
   const deleteEventTarget =
     deleteEventId === null ? null : (active.events.find((e) => e.id === deleteEventId) ?? null);
+  // 年表の削除対象は最新のストアから引き直す（すでに消えていたら描画しない。表示中で
+  // ない年表も対象になるため active でなく store 全体から探す）
+  const deleteTimelineTarget =
+    deleteTimelineId === null
+      ? null
+      : (store.timelines.find((t) => t.id === deleteTimelineId) ?? null);
 
   // 人物への紐付けの選択肢はグリッドの行順（生年順/手動順）で出す
   const personsById = new Map(active.persons.map((p) => [p.id, p]));
@@ -291,10 +307,20 @@ function ReadyContent() {
     setEventDialog(null);
   };
 
+  const handleDeleteTimeline = () => {
+    if (deleteTimelineId !== null) {
+      // 最後の1つの削除 → 空の「年表1」自動作成もこの中で行われる（appStore の契約）
+      useAppStore.getState().deleteTimeline(deleteTimelineId);
+    }
+    // 管理ダイアログは開いたまま結果（残りの一覧・自動作成された「年表1」）を見せる
+    setDeleteTimelineId(null);
+  };
+
   return (
     <div className={styles.shell}>
       <Toolbar
         store={store}
+        onManageTimelines={openTimelineManager}
         onAddPerson={openAddPerson}
         onAddEvent={openAddEvent}
         search={search}
@@ -382,6 +408,21 @@ function ReadyContent() {
           event={deleteEventTarget}
           onDelete={handleDeleteEvent}
           onClose={() => setDeleteEventId(null)}
+        />
+      )}
+      {timelineManagerOpen && (
+        <TimelineManagerDialog
+          store={store}
+          onRequestDelete={openDeleteTimeline}
+          onClose={() => setTimelineManagerOpen(false)}
+        />
+      )}
+      {/* 削除確認は管理ダイアログより後に描画して前面に重ねる（Esc は最前面のみ閉じる） */}
+      {deleteTimelineTarget !== null && (
+        <DeleteTimelineDialog
+          timeline={deleteTimelineTarget}
+          onDelete={handleDeleteTimeline}
+          onClose={() => setDeleteTimelineId(null)}
         />
       )}
       <ConflictDialog />
