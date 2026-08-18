@@ -16,14 +16,17 @@ import {
   useMemo,
   useRef,
   useState,
+  type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from 'react';
 
-import { eventsByColumn } from '../../domain/query';
+import { eventsByColumn, sortedPersonIds } from '../../domain/query';
 import type { Person, Timeline } from '../../domain/schema';
 import { cellValue, formatYear, type StoredYear } from '../../domain/year';
+import { useAppStore } from '../store/appStore';
 import { tagDotColor } from '../tagColor';
 import { hasOpenDialog } from './Dialog';
+import { gapFromOffset, planReorder } from './rowDragModel';
 import { chipColors, chipTooltip, eventsAtYear, laneColumn } from './selectionModel';
 import { SidePanel } from './SidePanel';
 import { visibleEvents, visibleRowIds } from './tagFilterModel';
@@ -124,6 +127,11 @@ type GridRowProps = {
   // 検索ヒット行 = 人物列を --color-row-hilite で強調（TASK-109 / screen-01 .name-cell.hit）
   searchHit: boolean;
   onOpenMenu: (personId: string, x: number, y: number) => void;
+  // 行ドラッグ&ドロップ（TASK-111 / ui-timeline-grid.md 6章）。ハンドルは手動並びのときだけ
+  // 表示する（モックアップに図例が無いため、寸法・配色はトークンで補完）
+  dragHandle: boolean;
+  dragging: boolean;
+  onDragHandleDown: (personId: string, event: ReactPointerEvent<HTMLSpanElement>) => void;
 };
 
 // 行コンポーネントは memo 化し、縦スクロールでは可視域に入った行だけがマウントされる
@@ -137,9 +145,16 @@ const GridRow = memo(function GridRow({
   selectedYear,
   searchHit,
   onOpenMenu,
+  dragHandle,
+  dragging,
+  onDragHandleDown,
 }: GridRowProps) {
   return (
-    <div className={styles.row} style={{ top, height: CELL_H }} data-person-id={person.id}>
+    <div
+      className={`${styles.row}${dragging ? ` ${styles.rowDragging}` : ''}`}
+      style={{ top, height: CELL_H }}
+      data-person-id={person.id}
+    >
       <div
         className={`${styles.nameCell}${searchHit ? ` ${styles.nameCellHit}` : ''}`}
         style={{ width: NAME_COL_W }}
@@ -158,6 +173,17 @@ const GridRow = memo(function GridRow({
           }
         }}
       >
+        {dragHandle && (
+          <span
+            className={styles.dragHandle}
+            title="ドラッグで並び替え"
+            data-testid="drag-handle"
+            onPointerDown={(event) => onDragHandleDown(person.id, event)}
+            onClick={(event) => event.stopPropagation()} // 行メニュー（人物列クリック）を開かせない
+          >
+            ⋮⋮
+          </span>
+        )}
         <span className={styles.name}>{person.name}</span>
         <span className={styles.years}>{lifespanLabel(person)}</span>
         {person.tags.length > 0 && (
@@ -267,8 +293,14 @@ export function TimelineGrid({
   // 選択列（US-004）。チップ / バッジ / 年ヘッダーのクリックで設定、Esc / ✕ で解除。
   // 10年ズームでは「列の年 = 区間の開始年」を持つ（columnYear と同じ規則）
   const [selectedYear, setSelectedYear] = useState<StoredYear | null>(null);
+  // ドロップ直後に合成される click（pointerdown/up が同じ人物列内で完結した場合）で
+  // 行メニューが開くのを抑止するフラグ（TASK-111。click はタイマーより先に届く）
+  const suppressMenuRef = useRef(false);
   // GridRow は memo 化されているため、行へ渡すコールバックは安定参照にする
   const openMenu = useCallback((personId: string, x: number, y: number) => {
+    if (suppressMenuRef.current) {
+      return;
+    }
     setMenu({ personId, x, y });
   }, []);
   const closeMenu = useCallback(() => {
@@ -319,6 +351,82 @@ export function TimelineGrid({
     () => eventsByColumn(visibleEvents(timeline.events, filterTags), zoom),
     [timeline.events, filterTags, zoom],
   );
+
+  // ===== 行ドラッグ&ドロップ（TASK-111 / ui-timeline-grid.md 6章 / US-008） =====
+  // 手動並びのときだけハンドルからドラッグを開始できる。Pointer Events の自前実装で、
+  // ドロップ位置の算術（オフセット/行高 → ギャップ → reorderPerson の toIndex）は
+  // rowDragModel.ts の純粋関数に分離してある
+  const [drag, setDrag] = useState<{ personId: string; gap: number } | null>(null);
+  const bodyRef = useRef<HTMLDivElement | null>(null);
+  // window リスナー（effect）から最新の表示行・年表を読むための参照（ドラッグ中の
+  // データ変化＝自動保存の競合読み直し等で古い行順に確定しないため。Toolbar と同じ流儀）
+  const personsRef = useRef(persons);
+  personsRef.current = persons;
+  const timelineRef = useRef(timeline);
+  timelineRef.current = timeline;
+
+  // ポインタ位置 → 挿入ギャップ。行高固定（CELL_H）なので本体領域の上端からの
+  // オフセット/行高の算術だけで決まる（DOMヒットテスト不要。設計の明示要求）
+  const gapAtPointer = useCallback((clientY: number): number => {
+    const body = bodyRef.current;
+    if (body === null) {
+      return 0; // ドラッグ中は必ず存在する（防御）
+    }
+    const offsetY = clientY - body.getBoundingClientRect().top;
+    return gapFromOffset(offsetY, personsRef.current.length, CELL_H);
+  }, []);
+
+  const startDrag = useCallback(
+    (personId: string, event: ReactPointerEvent<HTMLSpanElement>) => {
+      if (event.button !== 0) {
+        return; // 主ボタン以外（右クリック等）ではドラッグを始めない
+      }
+      event.preventDefault(); // テキスト選択・ネイティブD&Dの開始を防ぐ
+      setDrag({ personId, gap: gapAtPointer(event.clientY) });
+    },
+    [gapAtPointer],
+  );
+
+  // ドラッグ中だけ window でポインタを追跡する（ハンドル外へ出ても継続。pointercancel =
+  // 中断はドロップせず破棄）。gap の更新では effect を張り直さないよう personId だけに依存する
+  const dragPersonId = drag === null ? null : drag.personId;
+  useEffect(() => {
+    if (dragPersonId === null) {
+      return undefined;
+    }
+    const onMove = (event: PointerEvent) => {
+      const gap = gapAtPointer(event.clientY);
+      setDrag((prev) => (prev === null || prev.gap === gap ? prev : { ...prev, gap }));
+    };
+    const onUp = (event: PointerEvent) => {
+      setDrag(null);
+      // 直後に合成される click で行メニューが開くのを抑止（タイマーは click 配送後に走る）
+      suppressMenuRef.current = true;
+      window.setTimeout(() => {
+        suppressMenuRef.current = false;
+      }, 0);
+      const toIndex = planReorder(
+        dragPersonId,
+        gapAtPointer(event.clientY),
+        personsRef.current.map((p) => p.id),
+        // 全体順 = 手動順（ドラッグはsortMode='manual'時のみ開始でき、manual の personOrder は
+        // setSortMode/reorderPerson が実体化済み。appStore.materializeManualOrder と同一規則）
+        sortedPersonIds(timelineRef.current),
+      );
+      if (toIndex !== null) {
+        useAppStore.getState().reorderPerson(dragPersonId, toIndex);
+      }
+    };
+    const onCancel = () => setDrag(null);
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    window.addEventListener('pointercancel', onCancel);
+    return () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onCancel);
+    };
+  }, [dragPersonId, gapAtPointer]);
 
   const rowVirtualizer = useVirtualizer({
     count: persons.length,
@@ -528,7 +636,7 @@ export function TimelineGrid({
             );
           })}
         </div>
-        <div className={styles.body} style={{ height: rowVirtualizer.getTotalSize() }}>
+        <div ref={bodyRef} className={styles.body} style={{ height: rowVirtualizer.getTotalSize() }}>
           {virtualRows.map((row) => {
             const person = persons[row.index];
             if (person === undefined) {
@@ -545,9 +653,20 @@ export function TimelineGrid({
                 selectedYear={selectedYear}
                 searchHit={searchHitSet.has(person.id)}
                 onOpenMenu={openMenu}
+                dragHandle={timeline.sortMode === 'manual'}
+                dragging={dragPersonId === person.id}
+                onDragHandleDown={startDrag}
               />
             );
           })}
+          {/* ドロップ位置のインジケータ（挿入ギャップに水平線。行の後に描画 = セルより上） */}
+          {drag !== null && (
+            <div
+              className={styles.dropIndicator}
+              style={{ top: drag.gap * CELL_H }}
+              data-testid="drop-indicator"
+            />
+          )}
         </div>
       </div>
       {menu !== null && (

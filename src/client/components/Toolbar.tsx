@@ -1,9 +1,9 @@
 // ツールバーの枠（TASK-101）+ 保存状態表示（TASK-103）+ 〔＋人物〕（TASK-105）+
 // 〔＋イベント〕（TASK-106）+ ズームトグル〔1年|10年〕（TASK-108）+ 人物検索（TASK-109）+
-// タグ絞り込み〔タグ▼〕（TASK-110）。
+// タグ絞り込み〔タグ▼〕（TASK-110）+ 並び順〔生年順|手動〕（TASK-111）。
 // 構成・見た目は screen-01-main-grid.html のとおり。
 // 残るコントロールの配線は後続タスクの管轄:
-// 年表切替=TASK-113、並び順=TASK-111、範囲=TASK-112、
+// 年表切替=TASK-113、範囲=TASK-112、
 // 入出力=TASK-201/202、
 // 画像出力=TASK-204。それまでは disabled の枠として置く（表示値はストアの実データを反映する）。
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
@@ -287,7 +287,21 @@ export function Toolbar({
         onClear={onClearTags}
       />
       <ActiveTagPills selected={selectedTags} onRemove={onRemoveTag} />
-      <select className={styles.select} aria-label="並び順" value={active.sortMode} disabled>
+      {/* 並び順の切替（TASK-111 / ui-timeline-grid.md 6章）。見た目の正はモックアップの
+          select（screen-01。設計本文の「トグル」はこの2択切替を指す）。〔生年順〕への復帰は
+          ワンクリックで、personOrder は保持される（再度〔手動〕で前回の手動順に復帰。
+          data-model.md 4章 = appStore.setSortMode の契約） */}
+      <select
+        className={styles.select}
+        aria-label="並び順"
+        value={active.sortMode}
+        onChange={(event) => {
+          const mode = event.target.value === 'manual' ? 'manual' : 'birthAsc';
+          if (mode !== active.sortMode) {
+            useAppStore.getState().setSortMode(mode);
+          }
+        }}
+      >
         <option value="birthAsc">並び順: 生年順</option>
         <option value="manual">並び順: 手動</option>
       </select>

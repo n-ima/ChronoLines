@@ -294,6 +294,39 @@
   border-right: 2px solid var(--color-current-year);
 }
 
+/* ===== 行ドラッグ&ドロップ（TASK-111 / ui-timeline-grid.md 6章）。手動並びのときだけ
+   ハンドルを表示する。モックアップに図例が無いため配色・寸法はトークンで補完 ===== */
+.dragHandle {
+  flex: none;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  letter-spacing: -3px;
+  padding-right: 3px;
+  cursor: grab;
+  touch-action: none; /* Pointer Events の自前D&D: ブラウザのスクロールに奪わせない */
+  user-select: none;
+}
+
+.dragHandle:active {
+  cursor: grabbing;
+}
+
+/* ドラッグ中の行（元の位置）を淡くしてインジケータとの対比を作る */
+.rowDragging {
+  opacity: 0.5;
+}
+
+/* ドロップ位置のインジケータ（挿入ギャップの水平線。人物列〜グリッド全幅） */
+.dropIndicator {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 0;
+  border-top: 2px solid var(--color-primary);
+  z-index: 2; /* 人物列(sticky, z=2)と同値 + DOM後順 = 行より上、ヘッダー(z=3)より下 */
+  pointer-events: none;
+}
+
 /* ===== 行メニュー（人物列の行クリック → 編集/削除。ui-forms-dialogs.md 1章） ===== */
 .menuBackdrop {
   position: fixed;
