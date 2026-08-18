@@ -1,14 +1,22 @@
 // ツールバーの枠（TASK-101）+ 保存状態表示（TASK-103）+ 〔＋人物〕（TASK-105）+
-// 〔＋イベント〕（TASK-106）+ ズームトグル〔1年|10年〕（TASK-108）。
+// 〔＋イベント〕（TASK-106）+ ズームトグル〔1年|10年〕（TASK-108）+ 人物検索（TASK-109）。
 // 構成・見た目は screen-01-main-grid.html のとおり。
 // 残るコントロールの配線は後続タスクの管轄:
-// 年表切替=TASK-113、検索=TASK-109、タグ=TASK-110、並び順=TASK-111、範囲=TASK-112、
+// 年表切替=TASK-113、タグ=TASK-110、並び順=TASK-111、範囲=TASK-112、
 // 入出力=TASK-201/202、
 // 画像出力=TASK-204。それまでは disabled の枠として置く（表示値はストアの実データを反映する）。
+import { useEffect, useRef, useState, type ChangeEvent } from 'react';
+
 import type { Store, Timeline } from '../../domain/schema';
 import { useAppStore } from '../store/appStore';
 import { useSaveStore } from '../store/autosave';
 import controls from './controls.module.css';
+import {
+  hitCountLabel,
+  isNoHit,
+  SEARCH_DEBOUNCE_MS,
+  type SearchState,
+} from './searchModel';
 import styles from './Toolbar.module.css';
 
 // 保存状態（ツールバー右端。screen-01/-04 の save-state）: 通常時は「保存済み HH:mm:ss」、
@@ -31,6 +39,86 @@ function SaveStatus() {
   );
 }
 
+// 人物検索ボックス（TASK-109 / screen-01 .search-wrap）。入力の生値はローカルに持ち、
+// 150ms デバウンスで確定値だけを親（AppShell）へ渡す。「k/n件」+〔前へ/次へ〕はヒットが
+// あるときのみ、「該当なし」はクエリありでヒット0件のときのみ表示（ui-timeline-grid.md 6章）
+function SearchBox({
+  search,
+  onQuery,
+  onStep,
+}: {
+  search: SearchState;
+  onQuery: (query: string) => void;
+  onStep: (direction: 1 | -1) => void;
+}) {
+  const [rawQuery, setRawQuery] = useState('');
+  const timerRef = useRef<number | null>(null);
+  // デバウンス満了時は「予約時点」でなく「発火時点」の最新の props を呼ぶ
+  //（150ms の間にストアが変わっても古い行順で検索しない）
+  const onQueryRef = useRef(onQuery);
+  onQueryRef.current = onQuery;
+  useEffect(
+    () => () => {
+      if (timerRef.current !== null) {
+        window.clearTimeout(timerRef.current);
+      }
+    },
+    [],
+  );
+  const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const value = event.target.value;
+    setRawQuery(value);
+    if (timerRef.current !== null) {
+      window.clearTimeout(timerRef.current);
+    }
+    timerRef.current = window.setTimeout(() => {
+      timerRef.current = null;
+      onQueryRef.current(value);
+    }, SEARCH_DEBOUNCE_MS);
+  };
+  const label = hitCountLabel(search);
+  return (
+    <div className={styles.searchWrap}>
+      <input
+        className={`${styles.input} ${styles.search}`}
+        type="text"
+        placeholder="人物名で検索"
+        aria-label="人物名で検索"
+        value={rawQuery}
+        onChange={handleChange}
+      />
+      {label !== null && (
+        <>
+          <span className={styles.searchHits} data-testid="search-hits">
+            {label}
+          </span>
+          <button
+            type="button"
+            className={styles.searchNav}
+            aria-label="前のヒットへ"
+            onClick={() => onStep(-1)}
+          >
+            前へ
+          </button>
+          <button
+            type="button"
+            className={styles.searchNav}
+            aria-label="次のヒットへ"
+            onClick={() => onStep(1)}
+          >
+            次へ
+          </button>
+        </>
+      )}
+      {isNoHit(search) && (
+        <div className={styles.searchNone} data-testid="search-none" role="status">
+          該当なし
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ズームトグル（US-007）。選択中の側の再クリックは何もしない
 // （無変更の setZoom で自動保存のデバウンスを起こさないため）
 function setZoomIfChanged(active: Timeline, zoom: Timeline['view']['zoom']): void {
@@ -43,12 +131,19 @@ export function Toolbar({
   store,
   onAddPerson,
   onAddEvent,
+  search,
+  onSearchQuery,
+  onSearchStep,
 }: {
   store: Store;
   // 〔＋人物〕→ 人物フォーム（新規）を開く（TASK-105。ダイアログの状態は AppShell が持つ）
   onAddPerson: () => void;
   // 〔＋イベント〕→ イベントフォーム（新規・年初期値なし）を開く（TASK-106）
   onAddEvent: () => void;
+  // 人物検索（TASK-109）。状態はグリッドの強調・スクロールと共有するため AppShell が持つ
+  search: SearchState;
+  onSearchQuery: (query: string) => void;
+  onSearchStep: (direction: 1 | -1) => void;
 }) {
   const active = store.timelines.find((t) => t.id === store.activeTimelineId);
   if (active === undefined) {
@@ -65,13 +160,7 @@ export function Toolbar({
           </option>
         ))}
       </select>
-      <input
-        className={`${styles.input} ${styles.search}`}
-        type="text"
-        placeholder="人物名で検索"
-        aria-label="人物名で検索"
-        disabled
-      />
+      <SearchBox search={search} onQuery={onSearchQuery} onStep={onSearchStep} />
       <button type="button" className={controls.btn} disabled>
         タグ ▼
       </button>

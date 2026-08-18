@@ -120,6 +120,8 @@ type GridRowProps = {
   currentYear: StoredYear;
   // 選択列（null = 未選択）。変更時は可視行だけが再レンダリングされる（memo 化の範囲）
   selectedYear: StoredYear | null;
+  // 検索ヒット行 = 人物列を --color-row-hilite で強調（TASK-109 / screen-01 .name-cell.hit）
+  searchHit: boolean;
   onOpenMenu: (personId: string, x: number, y: number) => void;
 };
 
@@ -132,13 +134,15 @@ const GridRow = memo(function GridRow({
   virtualCols,
   currentYear,
   selectedYear,
+  searchHit,
   onOpenMenu,
 }: GridRowProps) {
   return (
     <div className={styles.row} style={{ top, height: CELL_H }} data-person-id={person.id}>
       <div
-        className={styles.nameCell}
+        className={`${styles.nameCell}${searchHit ? ` ${styles.nameCellHit}` : ''}`}
         style={{ width: NAME_COL_W }}
+        data-search-hit={searchHit ? 'true' : undefined}
         title={personTooltip(person)}
         role="button"
         tabIndex={0}
@@ -223,8 +227,14 @@ const GridRow = memo(function GridRow({
   );
 });
 
+// 検索の巡回スクロール要求（TASK-109）。seq は「同じ人物への再スクロール」も発火させる
+// ための単調増加トークン（ヒット1件で〔次へ〕を押した場合など）
+export type SearchScrollRequest = { personId: string; seq: number };
+
 export function TimelineGrid({
   timeline,
+  searchHitIds,
+  searchScroll,
   onEditPerson,
   onDeletePerson,
   onAddEventAtYear,
@@ -232,6 +242,11 @@ export function TimelineGrid({
   onDeleteEvent,
 }: {
   timeline: Timeline;
+  // 検索ヒット行の person id（表示行順。強調表示に使う。TASK-109）。
+  // 検索は絞り込みではないため行の集合・順序には影響しない（ui-timeline-grid.md 6章）
+  searchHitIds: readonly string[];
+  // 検索の〔前へ/次へ〕・クエリ確定によるスクロール要求（null = 要求なし）
+  searchScroll: SearchScrollRequest | null;
   // 行メニューの〔編集〕〔削除〕。ダイアログの状態は AppShell（ReadyContent）が持つ
   onEditPerson: (personId: string) => void;
   onDeletePerson: (personId: string) => void;
@@ -360,6 +375,19 @@ export function TimelineGrid({
     },
     [persons, rowVirtualizer],
   );
+
+  // 検索ヒットの強調（TASK-109）。ヒット集合の変化はまれなので Set 化して行ごとに判定する
+  const searchHitSet = useMemo(() => new Set(searchHitIds), [searchHitIds]);
+
+  // 検索のスクロール要求（クエリ確定・〔前へ/次へ〕）に応答する。要求（seq）が来たときだけ
+  // 動かし、データ変化では動かさない（ヒット0件時はそもそも要求が来ない = 位置不変）
+  useEffect(() => {
+    if (searchScroll !== null) {
+      scrollToPerson(searchScroll.personId);
+    }
+    // scrollToPerson（persons 由来）は依存に含めない: データ変化での勝手な再スクロールを防ぐ
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchScroll]);
 
   return (
     <>
@@ -510,6 +538,7 @@ export function TimelineGrid({
                 virtualCols={virtualCols}
                 currentYear={currentYear}
                 selectedYear={selectedYear}
+                searchHit={searchHitSet.has(person.id)}
                 onOpenMenu={openMenu}
               />
             );

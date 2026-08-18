@@ -25,8 +25,16 @@ import { PersonFormDialog } from './PersonFormDialog';
 import { personalEventsOf } from './personFormModel';
 import { RootErrorBoundary } from './RootErrorBoundary';
 import { SaveErrorBanner } from './SaveErrorBanner';
+import {
+  applyQuery,
+  currentHit,
+  emptySearchState,
+  refreshHits,
+  stepCursor,
+  type SearchState,
+} from './searchModel';
 import screen from './statusScreen.module.css';
-import { TimelineGrid } from './TimelineGrid';
+import { TimelineGrid, type SearchScrollRequest } from './TimelineGrid';
 import { Toolbar } from './Toolbar';
 
 // 409 応答（E-STORE-CORRUPT / E-STORE-NEWER）のうち表示に使う部分だけ読む
@@ -130,12 +138,64 @@ function ReadyContent() {
     return undefined;
   }, [openEditEvent]);
 
+  // 人物検索（TASK-109）。状態は Toolbar（入力・k/n・前へ/次へ）と TimelineGrid（強調・
+  // スクロール）で共有するためここに持つ。フックは早期 throw より前に置く規約のため、
+  // 検索が参照するアクティブ年表はここでは未検証のまま計算する（不整合は後段の throw が受ける）
+  const [search, setSearch] = useState<SearchState>(emptySearchState);
+  const [searchScroll, setSearchScroll] = useState<SearchScrollRequest | null>(null);
+  const activeTimeline =
+    store === null ? undefined : store.timelines.find((t) => t.id === store.activeTimelineId);
+  const bumpSearchScroll = useCallback((personId: string) => {
+    // seq は単調増加トークン: 同じ人物へのスクロール要求（n=1件で〔次へ〕等)も再発火させる
+    setSearchScroll((prev) => ({ personId, seq: (prev?.seq ?? 0) + 1 }));
+  }, []);
+  // クエリ確定（Toolbar の150msデバウンス後）: ヒット集合を計算し先頭ヒットへスクロール。
+  // ヒット0件・空クエリはスクロール要求を出さない（行・スクロール位置とも不変の受け入れ条件）
+  const handleSearchQuery = useCallback(
+    (query: string) => {
+      if (activeTimeline === undefined) {
+        return;
+      }
+      const next = applyQuery(sortedPersonIds(activeTimeline), activeTimeline.persons, query);
+      setSearch(next);
+      const hit = currentHit(next);
+      if (hit !== null) {
+        bumpSearchScroll(hit);
+      }
+    },
+    [activeTimeline, bumpSearchScroll],
+  );
+  // 〔前へ/次へ〕: カーソルを巡回させ、そのヒット行へスクロール
+  const handleSearchStep = useCallback(
+    (direction: 1 | -1) => {
+      const next = stepCursor(search, direction);
+      setSearch(next);
+      const hit = currentHit(next);
+      if (hit !== null) {
+        bumpSearchScroll(hit);
+      }
+    },
+    [search, bumpSearchScroll],
+  );
+  // データ・並び順の変化にヒット集合を追従させる（改名・削除・並び替えで強調のズレを残さない。
+  // スクロールは要求しない = ユーザー操作起点のときだけ動かす）
+  useEffect(() => {
+    if (activeTimeline === undefined) {
+      return;
+    }
+    setSearch((prev) =>
+      prev.query === ''
+        ? prev
+        : refreshHits(prev, sortedPersonIds(activeTimeline), activeTimeline.persons),
+    );
+  }, [activeTimeline]);
+
   if (store === null) {
     // initializeStore 後にのみ描画されるため通常到達しない。到達したら不整合なので
     // 黙って空画面にせず明示的に失敗させる（ルートエラー境界が受ける）
     throw new Error('ストアが未初期化のまま年表画面が描画されました');
   }
-  const active = store.timelines.find((t) => t.id === store.activeTimelineId);
+  const active = activeTimeline;
   if (active === undefined) {
     // storeSchema の参照整合性検証済みのため通常到達しない（Toolbar と同じ明示的失敗）
     throw new Error('E-STORE-ACTIVE-MISSING: activeTimelineId が timelines に存在しません');
@@ -200,13 +260,22 @@ function ReadyContent() {
 
   return (
     <div className={styles.shell}>
-      <Toolbar store={store} onAddPerson={openAddPerson} onAddEvent={openAddEvent} />
+      <Toolbar
+        store={store}
+        onAddPerson={openAddPerson}
+        onAddEvent={openAddEvent}
+        search={search}
+        onSearchQuery={handleSearchQuery}
+        onSearchStep={handleSearchStep}
+      />
       {/* 保存失敗の常設バナーはグリッド上部全幅（design-tokens.md 部品の共通規則） */}
       <SaveErrorBanner />
       {/* main はグリッド + サイドパネルの横並びの器（screen-01 .main） */}
       <main className={styles.main} aria-label="年表グリッド">
         <TimelineGrid
           timeline={active}
+          searchHitIds={search.hits}
+          searchScroll={searchScroll}
           onEditPerson={openEditPerson}
           onDeletePerson={openDeletePerson}
           onAddEventAtYear={openAddEventAtYear}

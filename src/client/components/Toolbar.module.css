@@ -23,8 +23,45 @@
   background: var(--color-bg);
 }
 
+/* 検索まわり（screen-01 .search-wrap / .search-hits / .search-none）。
+   「該当なし」は入力欄の直下に重ねる（レイアウトを動かさない） */
+.searchWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
 .search {
   width: 130px;
+}
+
+.searchHits {
+  font-size: var(--font-size-small);
+  color: var(--color-text-muted);
+  margin-left: var(--space-1);
+  white-space: nowrap;
+}
+
+/* 〔前へ/次へ〕（ui-timeline-grid.md 6章。モックアップには枠のみ = 小型ボタンで補完） */
+.searchNav {
+  margin-left: var(--space-1);
+  padding: 2px 8px;
+  font-size: var(--font-size-small);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius);
+  background: var(--color-bg);
+  color: var(--color-text);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.searchNone {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  font-size: var(--font-size-small);
+  color: var(--color-danger);
+  white-space: nowrap;
 }
 
 .range {

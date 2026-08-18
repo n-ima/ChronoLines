@@ -157,6 +157,11 @@
   cursor: pointer;
 }
 
+/* 検索ヒット行の人物列の強調（screen-01 .name-cell.hit） */
+.nameCellHit {
+  background: var(--color-row-hilite);
+}
+
 .name {
   font-weight: 600;
   font-size: 13px;
