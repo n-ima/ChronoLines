@@ -229,30 +229,63 @@
     同居・エラー境界の退避エクスポートと経路共有）。入出力ダイアログの見た目の正は
     screen-03 の #dlg-io（screen-04 は状態リファレンス）。インポートタブは TASK-202 まで
     無効表示。コミット 80437a1
-- [ ] TASK-202: インポートダイアログ（〔インポート〕タブ・.json 選択・エクスポート形式/保存形式の自動判別・旧版は移行・内容プレビュー〔年表n・人物n・イベントn・日時〕・〔すべて置き換える〕〔年表として追加する〕・置き換え時の追加確認・E-IMPORT-INVALID/E-IMPORT-NEWER・失敗時は既存データ無変更）
+- [x] TASK-202: インポートダイアログ（〔インポート〕タブ・.json 選択・エクスポート形式/保存形式の自動判別・旧版は移行・内容プレビュー〔年表n・人物n・イベントn・日時〕・〔すべて置き換える〕〔年表として追加する〕・置き換え時の追加確認・E-IMPORT-INVALID/E-IMPORT-NEWER・失敗時は既存データ無変更）
   - 対応要件: US-011 / 対応設計: ui-forms-dialogs.md 5章、data-model.md 6章
   - 完了条件: 判別・検証ロジックの Vitest（2形式受理・壊れたJSON拒否・新版拒否）がパス /
     実行時確認: エクスポート→全削除→インポート（置き換え）で元の状態に復元される。
     壊れたJSONはエラー表示のみで既存データ無傷
-- [ ] TASK-203: リカバリ画面（E-STORE-CORRUPT: detail+データパス表示・〔JSONファイルから復旧〕=置き換えインポートを recovery:true で PUT・.bak 手動復旧手順の提示・〔空のデータで開始〕+追加確認・〔再試行〕+「修復後はサーバー再起動」の明記 / E-STORE-NEWER: 形式バージョン表示・書き込み系全面不可の読み取り専用説明）
+  - 証拠 (2026-08-18): importFile.test.ts 22件新規で npm test 556/556 pass・typecheck エラー0・
+    Playwright 機械確認 32/32（エクスポート→全削除→置き換えインポートで isDeepStrictEqual 完全復元・
+    壊れたJSONは warn 表示のみで保存ファイルもバイト無変更・schemaVersion:2→E-IMPORT-NEWER・
+    screen-03 #dlg-io インポートタブのトークン実測一致）。
+    メモ: 判別・検証は src/domain/import.ts の parseImportFile に分離（loadStore の判定手順を
+    judgeStoreData として migrate.ts から共有）。版判定は store.schemaVersion が正で内容検証より先。
+    置き換えの追加確認は入れ子 Dialog（タイトル・ボタン文言は設計未規定のため補完）。コミット 2e0cc50
+- [x] TASK-203: リカバリ画面（E-STORE-CORRUPT: detail+データパス表示・〔JSONファイルから復旧〕=置き換えインポートを recovery:true で PUT・.bak 手動復旧手順の提示・〔空のデータで開始〕+追加確認・〔再試行〕+「修復後はサーバー再起動」の明記 / E-STORE-NEWER: 形式バージョン表示・書き込み系全面不可の読み取り専用説明）
   - 対応要件: US-010 / 対応設計: ui-forms-dialogs.md 6章、server-api.md 3章
   - 完了条件: 実行時確認: chronolines.json を手で壊して起動→リカバリ画面が出て既存ファイルは
     無変更。JSON復旧経路で復元でき、壊れたファイルが chronolines.corrupt-*.json に保全される。
     schemaVersion:2 のファイルで起動→NEWER 画面が出て一切書き込まれない
-- [ ] TASK-204: 画像出力（〔画像出力〕ボタン・html-to-image の toPng をグリッドコンテナに適用〔可視範囲のみ〕・ファイル名 chronolines-<年表名>-<YYYYMMDD>.png・失敗時トーストのみ）※Could。全Mustタスク完了後に着手
+  - 証拠 (2026-08-18): recoveryModel.test.ts 13件新規で npm test 569/569 pass・typecheck エラー0・
+    Playwright 機械確認 29/29（破損起動→画面表示だけでは元ファイル無変更・JSON復旧で通常UI復帰+
+    corrupt-* 改名保全・空データ開始はキャンセルで書き込みゼロ/承諾で年表1初期ストア・
+    schemaVersion:2→NEWER 画面で書き込み系UI不在+1.5秒監視でファイル無変更・トークン実測一致）。
+    メモ: リカバリのモックアップの正は screen-03-forms.html の #rec-corrupt/#rec-newer
+    （screen-04 には無い）。JSON復旧経路の追加確認は入れない（6章が明示要求するのは空データ開始
+    のみ・破損時に「現在のデータは失われます」は不正確なため）。AppShell の GET 409 仮実装
+    （TASK-101 メモ）を本実装に置換。コミット 5eb5430
+- [x] TASK-204: 画像出力（〔画像出力〕ボタン・html-to-image の toPng をグリッドコンテナに適用〔可視範囲のみ〕・ファイル名 chronolines-<年表名>-<YYYYMMDD>.png・失敗時トーストのみ）※Could。全Mustタスク完了後に着手
   - 対応要件: US-012 / 対応設計: ui-timeline-grid.md 8章
   - 完了条件: 実行時確認: 表示中のグリッドが PNG としてダウンロードされ、人物列・年ヘッダー・
     イベントレーン・可視セルが含まれる
+  - 証拠 (2026-08-18): imageExportModel.test.ts 12件新規で npm test 581/581 pass・typecheck エラー0・
+    Playwright 機械確認 20/20（PNG 寸法=グリッド可視領域・人物列/年ヘッダー/レーン/生存帯/チップを
+    ピクセル検査で確認・ファイル名 chronolines-戦国年表-YYYYMMDD.png・失敗経路はトーストのみで
+    グリッド無傷・スクロール状態でも sticky 部が欠けない）。
+    メモ: html-to-image はクローンに sticky/スクロールを引き継がないため画面外クローン+transform
+    補正で撮る（設計8章を満たす実装詳細）。空の年表はボタン disabled。年表名の Windows 禁止文字は
+    「-」に正規化。トースト部品 Toast.tsx を最小新設。コミット eae4b9e
 
 ## 仕上げ（ドキュメント・クリーンアップ等）
 
-- [ ] TASK-901: ルート README をアプリの README に置き換え（概要・必要環境 node>=22・インストール `npm ci`・起動 `npm start`・更新手順〔更新前の JSON エクスポート推奨+データ自動移行の説明〕・バックアップ/復旧手順〔エクスポート/インポート〕・データファイルの場所）
+- [x] TASK-901: ルート README をアプリの README に置き換え（概要・必要環境 node>=22・インストール `npm ci`・起動 `npm start`・更新手順〔更新前の JSON エクスポート推奨+データ自動移行の説明〕・バックアップ/復旧手順〔エクスポート/インポート〕・データファイルの場所）
   - 対応要件: environment.md「利用者の運用作業」 / 対応設計: environment.md、ADR 0002
   - 完了条件: README の手順どおりにクリーンな状態から `npm ci` → `npm start` で起動し
     http://localhost:5177 で操作できることを実測
-- [ ] TASK-902: 実装フェーズ完了検証（`npm run typecheck`・`npm test` 全件・`npm run build` 成功・成功指標シナリオ〔関ヶ原1600→家康57・政宗33〕の実行時確認・全タスクの完了条件証拠が tasks.md に記録済みであることの棚卸し・要件対応表〔architecture.md 7章〕の全USに対応実装が存在することの確認）
+  - 証拠 (2026-08-19): npm ci（164 packages・exit 0）→ npm start（初回自動ビルド→127.0.0.1:5177 起動・
+    2回目はビルドスキップも実測）→ Playwright 機械確認 7/7（health 200・初期画面・人物追加→
+    グリッド表示→自動保存まで。CHRONOLINES_DATA_DIR 一時ディレクトリで実データ無汚染）。
+    メモ: npm start は dist/client 既存時に再ビルドしないため、更新手順に npm run build を
+    明示ステップとして追加。macOS の保存先はコード実態どおり ~/.local/share/chronolines と記載。
+    コミット 67af074
+- [x] TASK-902: 実装フェーズ完了検証（`npm run typecheck`・`npm test` 全件・`npm run build` 成功・成功指標シナリオ〔関ヶ原1600→家康57・政宗33〕の実行時確認・全タスクの完了条件証拠が tasks.md に記録済みであることの棚卸し・要件対応表〔architecture.md 7章〕の全USに対応実装が存在することの確認）
   - 対応要件: 全US / 対応設計: architecture.md 7章
   - 完了条件: 上記コマンド3点がすべて成功し、棚卸しで未完了・乖離が0件
+  - 証拠 (2026-08-19): typecheck エラー0・npm test 581/581 pass（24ファイル）・build 成功
+    （170 modules・dist/client 生成）・成功指標シナリオ Playwright 機械確認 10/10
+    （npm start の本番配信で関ヶ原1600選択→列強調+家康57・政宗33 同一画面。alive 判定まで検証）・
+    棚卸し25タスク全件 [x]+日付つき証拠あり+証拠記載の14コミットの実在を git cat-file で確認・
+    要件対応表 US-001〜012 全てに対応実装ファイルの実在を確認（欠落0件）
 
 ---
 実装メモ（判断に迷った点、後で見直すべき点など）はこのファイル末尾に追記してよい。

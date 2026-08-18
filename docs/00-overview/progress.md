@@ -1,14 +1,14 @@
 <!-- GATE_STATUS
 requirements: done
 design: done
-implementation: in_progress
+implementation: done
 test: not_started
 release: not_started
 -->
 
 # 進捗ダッシュボード
 
-最終更新日: 2026-08-18
+最終更新日: 2026-08-19
 
 上のコメントブロック（GATE_STATUS）が正の状態。`.github/hooks/` のフックや
 `.github/skills/gate-check/SKILL.md` はこのブロックを直接パースするため、
@@ -18,7 +18,7 @@ release: not_started
 |---|---|---|---|
 | 要件定義 | 完了 | 2026-08-12 | 成果物4点＋spec-criticレビュー（MAJOR6件対応済み）。ユーザー承認済み |
 | 設計 | 完了 | 2026-08-12 | architecture.md・ADR4本・詳細設計5本・モックアップ4枚+トークン・stack-conventionsスキル。spec-criticレビュー（MAJOR2件対応済み）。タグ拡張差分（イベントへの付与・複数選択絞り込み）承認込み。モックアップ確認済み（A-004確定） |
-| 実装 | 進行中 | - | 26タスク中21完了（基盤001-007・コア101-113・周辺201。各タスクの証拠は tasks.md）。残り: 202〔インポート〕・203〔リカバリ画面〕・204〔画像出力/Could〕・901〔README〕・902〔完了検証〕 |
+| 実装 | 完了 | 2026-08-19 | 26タスク全完了（各タスクの証拠は tasks.md）。TASK-902 完了検証: typecheck 0・npm test 581/581・build 成功・成功指標シナリオ〔関ヶ原1600→家康57・政宗33〕実測パス・棚卸し/要件対応表の乖離0件。実装→テストは自動区間のため機械的完了条件の充足をもって完了（独立レビューはテストフェーズの reviewer が実施） |
 | テスト | 未着手 | - | |
 | リリース | 未着手 | - | |
 
