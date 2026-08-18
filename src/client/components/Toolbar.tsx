@@ -1,10 +1,12 @@
 // ツールバーの枠（TASK-101）+ 保存状態表示（TASK-103）+ 〔＋人物〕（TASK-105）+
-// 〔＋イベント〕（TASK-106）。構成・見た目は screen-01-main-grid.html のとおり。
+// 〔＋イベント〕（TASK-106）+ ズームトグル〔1年|10年〕（TASK-108）。
+// 構成・見た目は screen-01-main-grid.html のとおり。
 // 残るコントロールの配線は後続タスクの管轄:
 // 年表切替=TASK-113、検索=TASK-109、タグ=TASK-110、並び順=TASK-111、範囲=TASK-112、
-// ズーム=TASK-108、入出力=TASK-201/202、
+// 入出力=TASK-201/202、
 // 画像出力=TASK-204。それまでは disabled の枠として置く（表示値はストアの実データを反映する）。
-import type { Store } from '../../domain/schema';
+import type { Store, Timeline } from '../../domain/schema';
+import { useAppStore } from '../store/appStore';
 import { useSaveStore } from '../store/autosave';
 import controls from './controls.module.css';
 import styles from './Toolbar.module.css';
@@ -27,6 +29,14 @@ function SaveStatus() {
       {savedAt === null ? '' : `保存済み ${savedAt}`}
     </span>
   );
+}
+
+// ズームトグル（US-007）。選択中の側の再クリックは何もしない
+// （無変更の setZoom で自動保存のデバウンスを起こさないため）
+function setZoomIfChanged(active: Timeline, zoom: Timeline['view']['zoom']): void {
+  if (active.view.zoom !== zoom) {
+    useAppStore.getState().setZoom(zoom);
+  }
 }
 
 export function Toolbar({
@@ -91,14 +101,16 @@ export function Toolbar({
         <button
           type="button"
           className={active.view.zoom === 'year' ? styles.zoomOn : styles.zoomBtn}
-          disabled
+          aria-pressed={active.view.zoom === 'year'}
+          onClick={() => setZoomIfChanged(active, 'year')}
         >
           1年
         </button>
         <button
           type="button"
           className={active.view.zoom === 'decade' ? styles.zoomOn : styles.zoomBtn}
-          disabled
+          aria-pressed={active.view.zoom === 'decade'}
+          onClick={() => setZoomIfChanged(active, 'decade')}
         >
           10年
         </button>

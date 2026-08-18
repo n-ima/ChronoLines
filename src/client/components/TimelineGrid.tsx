@@ -4,9 +4,20 @@
 // 都度計算し、300万セル分の配列・キャッシュ・巨大 useMemo を作らない（ADR 0003）。
 // イベントレーン・選択列・サイドパネル（TASK-107: ui-timeline-grid.md 3〜4章）も本体で持つ
 // （選択列の強調とパネルの年齢比較は行・列の状態を共有するため）。
-// 10年ズーム（TASK-108）は列軸の置き換えとして差し込む構成とし、ここでは作らない。
+// 10年ズーム（TASK-108: ui-timeline-grid.md 5章 / screen-02）は「列 = 年」を
+// 「列 = 10年区間」に置き換えるだけで同じ仮想化機構を使う（ADR 0003）。
+// 切替時は切替前の可視範囲の中心年を保持してスクロール位置を再計算する（US-007）。
 import { useVirtualizer, type VirtualItem } from '@tanstack/react-virtual';
-import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 
 import { eventsByColumn, sortedPersonIds } from '../../domain/query';
 import type { Person, Timeline } from '../../domain/schema';
@@ -18,19 +29,27 @@ import { SidePanel } from './SidePanel';
 import styles from './TimelineGrid.module.css';
 import {
   CELL_H,
-  CELL_W,
   EVENT_LANE_H,
+  EVENT_LANE_H_DECADE,
   NAME_COL_W,
   OVERSCAN,
   YEAR_HEADER_H,
   cellText,
   cellTooltip,
+  centerYearAstro,
+  columnKeyAstro,
+  columnLabel,
+  columnWidth,
   columnYear,
+  decadeCellValue,
+  decadeRangeLabel,
   gridColumns,
   isDecadeGuideYear,
   lifespanLabel,
   personTooltip,
+  scrollLeftForCenterYear,
   type GridColumns,
+  type ZoomLevel,
 } from './timelineGridModel';
 
 // 人物列に表示するタグ色ドットの最大数（ui-timeline-grid.md 1章）
@@ -151,6 +170,33 @@ const GridRow = memo(function GridRow({
       </div>
       {virtualCols.map((col) => {
         const year = columnYear(columns, col.index);
+        if (columns.zoom === 'decade') {
+          // 10年ズームの集約セル（ui-timeline-grid.md 5章 / screen-02）。ツールチップ・
+          // 罫線ガイドは screen-02 に無いため付けない（見た目の正はモックアップ）
+          const value = decadeCellValue(person, columnKeyAstro(columns, col.index), currentYear);
+          const kindClass =
+            value.kind === 'alive' ? ` ${styles.alive}` : value.kind === 'virtual' ? ` ${styles.virtual}` : '';
+          const birthMarker = value.kind === 'alive' && value.birthMarker;
+          const deathMarker = value.kind === 'alive' && value.deathMarker;
+          const selClass =
+            year === selectedYear
+              ? ` ${styles.selcol}${value.kind === 'blank' ? ` ${styles.selcolBlank}` : ''}`
+              : '';
+          return (
+            <div
+              key={col.key}
+              className={`${styles.cell}${kindClass}${birthMarker ? ` ${styles.birthMarker}` : ''}${selClass}`}
+              style={{ left: NAME_COL_W + col.start, width: col.size }}
+              data-year={year}
+              data-kind={value.kind}
+              data-birth-marker={birthMarker ? 'true' : undefined}
+              data-death-marker={deathMarker ? 'true' : undefined}
+            >
+              {cellText(value)}
+              {deathMarker && <span className={styles.deathMark} />}
+            </div>
+          );
+        }
         const value = cellValue(person, year, currentYear);
         const tooltip = cellTooltip(person, year, value);
         const kindClass =
@@ -198,7 +244,8 @@ export function TimelineGrid({
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const [menu, setMenu] = useState<RowMenuState | null>(null);
   const [yearMenu, setYearMenu] = useState<YearMenuState | null>(null);
-  // 選択列（US-004）。チップ / +N バッジ / 年ヘッダーのクリックで設定、Esc / ✕ で解除
+  // 選択列（US-004）。チップ / バッジ / 年ヘッダーのクリックで設定、Esc / ✕ で解除。
+  // 10年ズームでは「列の年 = 区間の開始年」を持つ（columnYear と同じ規則）
   const [selectedYear, setSelectedYear] = useState<StoredYear | null>(null);
   // GridRow は memo 化されているため、行へ渡すコールバックは安定参照にする
   const openMenu = useCallback((personId: string, x: number, y: number) => {
@@ -243,11 +290,15 @@ export function TimelineGrid({
     });
   }, [timeline]);
 
+  const zoom = timeline.view.zoom;
   const columns = useMemo(() => gridColumns(timeline, currentYear), [timeline, currentYear]);
 
-  // イベントの列集計（キー = astro 年。列内は月日→名前順。domain/query.ts）。
-  // タグ絞り込み（filterEventsByTags）は TASK-110 でこの入力に挿入する
-  const eventColumns = useMemo(() => eventsByColumn(timeline.events, 'year'), [timeline.events]);
+  // イベントの列集計（キー = astro 年（1年）/ decadeStart（10年）。列内は月日→名前順。
+  // domain/query.ts）。タグ絞り込み（filterEventsByTags）は TASK-110 でこの入力に挿入する
+  const eventColumns = useMemo(
+    () => eventsByColumn(timeline.events, zoom),
+    [timeline.events, zoom],
+  );
 
   const rowVirtualizer = useVirtualizer({
     count: persons.length,
@@ -262,16 +313,42 @@ export function TimelineGrid({
     horizontal: true,
     count: columns.count,
     getScrollElement: () => scrollRef.current,
-    estimateSize: () => CELL_W,
+    estimateSize: () => columnWidth(columns),
     overscan: OVERSCAN,
-    // key = astro年。範囲変更で index がずれても列の同一性を保つ
-    getItemKey: (index) => columns.startAstro + index,
+    // key = astro年（10年ズームは decadeStart）。範囲変更で index がずれても列の同一性を保つ
+    getItemKey: (index) => columnKeyAstro(columns, index),
+  });
+
+  // ズーム切替時の中心年保持（US-007 / ui-timeline-grid.md 5章）。
+  // 切替後の DOM は幅が縮んで scrollLeft がクランプされうるため、スクロールイベントで
+  // 追跡した「切替前の scrollLeft」から中心年を求める（paint 前の layout effect で処理する）
+  const scrollLeftRef = useRef(0);
+  const prevViewRef = useRef<{ zoom: ZoomLevel; columns: GridColumns } | null>(null);
+  useLayoutEffect(() => {
+    const prev = prevViewRef.current;
+    prevViewRef.current = { zoom, columns };
+    if (prev === null || prev.zoom === zoom) {
+      return;
+    }
+    const el = scrollRef.current;
+    if (el === null) {
+      return;
+    }
+    const center = centerYearAstro(prev.columns, scrollLeftRef.current, el.clientWidth);
+    // 列幅 44⇔72 の変更を仮想化のサイズキャッシュへ反映してから位置を再計算する
+    columnVirtualizer.measure();
+    const left = scrollLeftForCenterYear(columns, center, el.clientWidth);
+    el.scrollLeft = left;
+    scrollLeftRef.current = left;
+    // 選択列は列の意味（年 ⇔ 10年区間）が変わるため解除する
+    setSelectedYear(null);
   });
 
   const virtualRows = rowVirtualizer.getVirtualItems();
   const virtualCols = columnVirtualizer.getVirtualItems();
-  // 人物列(200px)は仮想化の座標系の外（左に固定）。列座標は一律 NAME_COL_W だけずらす
-  const totalWidth = NAME_COL_W + columnVirtualizer.getTotalSize();
+  // 人物列(200px)は仮想化の座標系の外（左に固定）。列座標は一律 NAME_COL_W だけずらす。
+  // 総幅は列数×列幅で確定計算する（切替直後の仮想化キャッシュの古い実測に依存させない）
+  const totalWidth = NAME_COL_W + columns.count * columnWidth(columns);
 
   // 年齢比較行クリック → その人物の行を可視範囲の中央へスクロール（ui-timeline-grid.md 4章）
   const scrollToPerson = useCallback(
@@ -286,25 +363,39 @@ export function TimelineGrid({
 
   return (
     <>
-    <div ref={scrollRef} className={styles.scroll} data-testid="timeline-grid">
+    <div
+      ref={scrollRef}
+      className={styles.scroll}
+      data-testid="timeline-grid"
+      onScroll={(event) => {
+        // ズーム切替時に「切替前の scrollLeft」を参照するための追跡（layout effect 参照）
+        scrollLeftRef.current = event.currentTarget.scrollLeft;
+      }}
+    >
       <div className={styles.inner} style={{ width: totalWidth }}>
-        {/* 年ヘッダー（上に sticky）。クリックで列選択（ui-timeline-grid.md 3章） */}
+        {/* 年ヘッダー（上に sticky）。クリックで列選択（ui-timeline-grid.md 3章）。
+            10年ズームの見出しは "1600〜" 形式・罫線ガイドなし（screen-02） */}
         <div className={styles.yearHeader} style={{ height: YEAR_HEADER_H }}>
           <div className={styles.cornerCell} style={{ width: NAME_COL_W }}>
             人物
           </div>
           {virtualCols.map((col) => {
             const year = columnYear(columns, col.index);
+            const isDecade = columns.zoom === 'decade';
             const selClass = year === selectedYear ? ` ${styles.yearCellSel}` : '';
+            const ruleClass = isDecade ? '' : columnRuleClass(year, currentYear);
+            const label = isDecade
+              ? `${decadeRangeLabel(columnKeyAstro(columns, col.index))}年`
+              : `${formatYear(year)}年`;
             return (
               <div
                 key={col.key}
-                className={`${styles.yearCell}${selClass}${columnRuleClass(year, currentYear)}`}
+                className={`${styles.yearCell}${selClass}${ruleClass}`}
                 style={{ left: NAME_COL_W + col.start, width: col.size }}
                 data-year={year}
                 role="button"
                 tabIndex={0}
-                aria-label={`${formatYear(year)}年の列を選択`}
+                aria-label={`${label}の列を選択`}
                 onClick={() => setSelectedYear(year)}
                 onKeyDown={(event) => {
                   if (event.key === 'Enter' || event.key === ' ') {
@@ -312,21 +403,29 @@ export function TimelineGrid({
                     setSelectedYear(year);
                   }
                 }}
-                onContextMenu={(event) => {
-                  // 右クリック〔この年にイベント追加〕（ui-forms-dialogs.md 2章）
-                  event.preventDefault();
-                  setYearMenu({ year, x: event.clientX, y: event.clientY });
-                }}
+                onContextMenu={
+                  isDecade
+                    ? undefined // 10年列は特定の年を指せないため年メニューは出さない
+                    : (event) => {
+                        // 右クリック〔この年にイベント追加〕（ui-forms-dialogs.md 2章）
+                        event.preventDefault();
+                        setYearMenu({ year, x: event.clientX, y: event.clientY });
+                      }
+                }
               >
-                {formatYear(year)}
+                {columnLabel(columns, col.index)}
               </div>
             );
           })}
         </div>
-        {/* イベントレーン（年ヘッダー直下に sticky。ui-timeline-grid.md 3章 / screen-01 .event-lane） */}
+        {/* イベントレーン（年ヘッダー直下に sticky。ui-timeline-grid.md 3章 / screen-01 .event-lane。
+            10年ズームは件数バッジ「n件」のみ・高さ1段（ui-timeline-grid.md 5章 / screen-02 .ev-badge） */}
         <div
           className={styles.eventLane}
-          style={{ height: EVENT_LANE_H, top: YEAR_HEADER_H }}
+          style={{
+            height: columns.zoom === 'decade' ? EVENT_LANE_H_DECADE : EVENT_LANE_H,
+            top: YEAR_HEADER_H,
+          }}
           data-testid="event-lane"
         >
           <div className={styles.laneCorner} style={{ width: NAME_COL_W }}>
@@ -334,8 +433,32 @@ export function TimelineGrid({
           </div>
           {virtualCols.map((col) => {
             const year = columnYear(columns, col.index);
-            const lane = laneColumn(eventColumns.get(columns.startAstro + col.index));
+            const colEvents = eventColumns.get(columnKeyAstro(columns, col.index));
             const selClass = year === selectedYear ? ` ${styles.evColSel}` : '';
+            if (columns.zoom === 'decade') {
+              const count = colEvents?.length ?? 0;
+              return (
+                <div
+                  key={col.key}
+                  className={`${styles.evCol} ${styles.evColDecade}${selClass}`}
+                  style={{ left: NAME_COL_W + col.start, width: col.size }}
+                  data-year={year}
+                  role="button"
+                  tabIndex={count > 0 ? 0 : -1}
+                  aria-label={`${decadeRangeLabel(columnKeyAstro(columns, col.index))}年のイベント列を選択`}
+                  onClick={() => setSelectedYear(year)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      setSelectedYear(year);
+                    }
+                  }}
+                >
+                  {count > 0 && <div className={styles.countBadge}>{count}件</div>}
+                </div>
+              );
+            }
+            const lane = laneColumn(colEvents);
             return (
               <div
                 key={col.key}
@@ -435,11 +558,14 @@ export function TimelineGrid({
         </ContextMenu>
       )}
     </div>
-    {/* サイドパネルはグリッドの右に横並び（AppShell の .main が flex の器。screen-01 .main） */}
+    {/* サイドパネルはグリッドの右に横並び（AppShell の .main が flex の器。screen-01 .main）。
+        10年ズームでは選択列 = 10年区間（selectedYear = 区間の開始年。eventsAtYear の
+        toAstro(開始年) が eventsByColumn の decadeStart キーと一致する） */}
     {selectedYear !== null && (
       <SidePanel
-        // 年が変わったら展開状態ごと作り直す（前の年の展開を持ち越さない）
-        key={selectedYear}
+        // 年・ズームが変わったら展開状態ごと作り直す（前の選択の展開を持ち越さない）
+        key={`${zoom}:${selectedYear}`}
+        zoom={zoom}
         year={selectedYear}
         events={eventsAtYear(eventColumns, selectedYear)}
         persons={persons}

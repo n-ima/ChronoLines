@@ -228,6 +228,46 @@
   background: var(--color-virtual-band);
 }
 
+/* ===== 10年ズームの集約セル（ui-timeline-grid.md 5章 / screen-02） ===== */
+
+/* 区間内に生年: セル左端の縦線 = 帯の開始端の視認（screen-02 .birth-marker） */
+.birthMarker::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--color-alive-band);
+}
+
+/* 区間内に没年: セル右端の縦線（screen-02 .dm。span 実体で描画） */
+.deathMark {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--color-alive-band);
+}
+
+/* 10年ズームのイベント列（バッジ1個を中央寄せ。screen-02 .ev-col） */
+.evColDecade {
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 10年単位の件数バッジ（screen-02 .ev-badge） */
+.countBadge {
+  background: var(--color-chip-bg);
+  color: var(--color-chip-text);
+  border-radius: 8px;
+  font-size: 11px;
+  padding: 1px 8px;
+  white-space: nowrap;
+}
+
 /* ===== 選択列の強調（ui-timeline-grid.md 4章 / screen-01 .selcol） ===== */
 .selcol {
   box-shadow:

@@ -6,6 +6,7 @@
 import type { Person, TimelineEvent } from '../../domain/schema';
 import { cellValue, formatYear, toAstro, type CellValue, type StoredYear } from '../../domain/year';
 import { tagPillColors } from '../tagColor';
+import { decadeCellValue, decadeRangeLabel, type ZoomLevel } from './timelineGridModel';
 
 // 列ごとのチップ最大数。3件以上は「+N」バッジに集約する（ui-timeline-grid.md 3章）
 export const MAX_LANE_CHIPS = 2;
@@ -36,9 +37,15 @@ export function chipTooltip(event: TimelineEvent): string {
   return event.tags.length > 0 ? `${event.name}（${event.tags.join('、')}）` : event.name;
 }
 
-// パネル見出し（1年ズーム: 「1600年」「前100年」。10年ズームの範囲表記は TASK-108 で追加）
+// パネル見出し（1年ズーム: 「1600年」「前100年」）
 export function panelYearLabel(year: StoredYear): string {
   return `${formatYear(year)}年`;
+}
+
+// パネル見出しのズーム対応（ui-timeline-grid.md 4章: 10年ズーム時は範囲「1600〜1609」。
+// year は選択列の年 = 10年ズームでは区間の開始年）
+export function panelColumnLabel(zoom: ZoomLevel, year: StoredYear): string {
+  return zoom === 'decade' ? decadeRangeLabel(toAstro(year)) : panelYearLabel(year);
 }
 
 // パネルのイベント行に添える月日（月のみ「9月」・月日「9月15日」・無指定は null = 非表示）
@@ -67,6 +74,41 @@ export function ageRows(
   currentYear: StoredYear,
 ): AgeRow[] {
   return persons.map((person) => ({ person, value: cellValue(person, year, currentYear) }));
+}
+
+// 10年ズームの年齢比較リスト: セル（decadeCellValue）と同じ判定・同じ書式
+// （数値は区間開始年時点。dStartYear = 区間の開始年の stored 表現 = 選択列の年）
+export function decadeAgeRows(
+  persons: readonly Person[],
+  dStartYear: StoredYear,
+  currentYear: StoredYear,
+): AgeRow[] {
+  const dStart = toAstro(dStartYear);
+  return persons.map((person) => {
+    const value = decadeCellValue(person, dStart, currentYear);
+    return {
+      person,
+      value: value.kind === 'alive' ? { kind: 'alive', age: value.age } : value,
+    };
+  });
+}
+
+// 10年列のイベントの年別グループ（ui-timeline-grid.md 5章「パネルに年別グループで全件表示」）。
+// 入力は eventsByColumn の1列分 = (年, 月, 日, 名前) 昇順ソート済みなので、
+// 出現順のまま年で区切るだけで順序が保たれる
+export type YearGroup = { year: StoredYear; events: TimelineEvent[] };
+
+export function groupEventsByYear(events: readonly TimelineEvent[]): YearGroup[] {
+  const groups: YearGroup[] = [];
+  for (const event of events) {
+    const last = groups[groups.length - 1];
+    if (last !== undefined && last.year === event.year) {
+      last.events.push(event);
+    } else {
+      groups.push({ year: event.year, events: [event] });
+    }
+  }
+  return groups;
 }
 
 // 年齢比較行の表示文字列（alive/virtual はセルと同じ書式。blank は「—（生前）」=

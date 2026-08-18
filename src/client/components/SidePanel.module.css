@@ -93,6 +93,14 @@
   flex: none;
 }
 
+/* 10年ズームの年別グループ見出し（パネルのイベント一覧。ui-timeline-grid.md 5章） */
+.yearGroup {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  margin: var(--space-2) 0 var(--space-1);
+}
+
 /* 展開時のメモ全文（改行を保持して表示） */
 .note {
   margin-top: 6px;
