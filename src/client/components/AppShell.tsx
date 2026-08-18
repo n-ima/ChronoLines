@@ -2,7 +2,7 @@
 // ロード成功後のデータの正は appStore（Zustand。TASK-102）が保持し、自動保存・rev 管理は
 // store/autosave.ts（TASK-103）が担う。本コンポーネントはロードフェーズの管理と自動保存の
 // 開始だけを持つ。グリッドは TASK-104、リカバリ画面の本実装（復旧操作）は TASK-203 の管轄。
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { z } from 'zod';
 
 import { allTags, sortedPersonIds } from '../../domain/query';
@@ -23,6 +23,8 @@ import { DeletePersonDialog } from './DeletePersonDialog';
 import { EventFormDialog } from './EventFormDialog';
 import { PersonFormDialog } from './PersonFormDialog';
 import { personalEventsOf } from './personFormModel';
+import { RangeBanner } from './RangeBanner';
+import { isTimelineEmpty } from './rangeModel';
 import { RootErrorBoundary } from './RootErrorBoundary';
 import { SaveErrorBanner } from './SaveErrorBanner';
 import {
@@ -146,6 +148,10 @@ function ReadyContent() {
   const [searchScroll, setSearchScroll] = useState<SearchScrollRequest | null>(null);
   const activeTimeline =
     store === null ? undefined : store.timelines.find((t) => t.id === store.activeTimelineId);
+
+  // 現在年 = 実行時のシステム日付の年（TimelineGrid と同じ流儀。「範囲内に該当なし」
+  // バナーの判定（存命者の生存期間の終端・自動範囲）に使う。TASK-112）
+  const currentYear = useMemo(() => new Date().getFullYear() as StoredYear, []);
 
   // タグ絞り込み（TASK-110）。選択集合は Toolbar（ドロップダウン・ピル）と TimelineGrid
   //（行・イベントレーン）と検索（表示行に対して照合）で共有するためここに持つ。
@@ -301,19 +307,39 @@ function ReadyContent() {
       />
       {/* 保存失敗の常設バナーはグリッド上部全幅（design-tokens.md 部品の共通規則） */}
       <SaveErrorBanner />
+      {/* 範囲内に該当なしの情報バナー（TASK-112 / ui-timeline-grid.md 7章） */}
+      <RangeBanner timeline={active} currentYear={currentYear} />
       {/* main はグリッド + サイドパネルの横並びの器（screen-01 .main） */}
       <main className={styles.main} aria-label="年表グリッド">
-        <TimelineGrid
-          timeline={active}
-          filterTags={selectedTags}
-          searchHitIds={search.hits}
-          searchScroll={searchScroll}
-          onEditPerson={openEditPerson}
-          onDeletePerson={openDeletePerson}
-          onAddEventAtYear={openAddEventAtYear}
-          onEditEvent={openEditEvent}
-          onDeleteEvent={openDeleteEvent}
-        />
+        {isTimelineEmpty(active) ? (
+          // 人物0件・イベント0件の年表 = 中央の空状態表示（ui-timeline-grid.md 7章 /
+          // screen-01 .empty-state）。〔＋人物を追加〕はツールバーの〔＋人物〕と同じ動線
+          <div className={styles.emptyState} data-testid="empty-state">
+            <div className={styles.emptyIcon} aria-hidden="true">
+              📜
+            </div>
+            <p className={styles.emptyText}>
+              この年表にはまだ人物がいません。
+              <br />
+              人物を追加して年表を作りましょう。
+            </p>
+            <button type="button" className={controls.btnPrimary} onClick={openAddPerson}>
+              ＋人物を追加
+            </button>
+          </div>
+        ) : (
+          <TimelineGrid
+            timeline={active}
+            filterTags={selectedTags}
+            searchHitIds={search.hits}
+            searchScroll={searchScroll}
+            onEditPerson={openEditPerson}
+            onDeletePerson={openDeletePerson}
+            onAddEventAtYear={openAddEventAtYear}
+            onEditEvent={openEditEvent}
+            onDeleteEvent={openDeleteEvent}
+          />
+        )}
       </main>
       {personDialog !== null && (personDialog.mode === 'add' || editingPerson !== null) && (
         <PersonFormDialog

@@ -1,0 +1,9 @@
+/* 範囲内に該当なしの情報バナー（screen-01 .banner.info / design-tokens.md 部品の共通規則:
+   バナーはグリッド上部全幅・情報 = selcol-bg）。色はトークンのみ使う */
+.banner {
+  padding: var(--space-2) var(--space-4);
+  font-size: 13px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-selcol-bg);
+  color: #78350f; /* 文字色はモックアップ screen-01 .banner.info のとおり */
+}

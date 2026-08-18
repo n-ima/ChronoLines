@@ -172,6 +172,7 @@
 }
 
 .range {
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--space-1);
@@ -181,6 +182,17 @@
 
 .rangeInput {
   width: 72px;
+}
+
+/* 範囲入力のインラインエラー（design-tokens.md 部品の共通規則: danger色 12px・フィールド
+   直下）。searchNone と同じく入力欄の直下に重ねる（ツールバーのレイアウトを動かさない） */
+.rangeError {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  font-size: var(--font-size-small);
+  color: var(--color-danger);
+  white-space: nowrap;
 }
 
 .zoomToggle {

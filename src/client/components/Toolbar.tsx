@@ -1,18 +1,27 @@
 // ツールバーの枠（TASK-101）+ 保存状態表示（TASK-103）+ 〔＋人物〕（TASK-105）+
 // 〔＋イベント〕（TASK-106）+ ズームトグル〔1年|10年〕（TASK-108）+ 人物検索（TASK-109）+
-// タグ絞り込み〔タグ▼〕（TASK-110）+ 並び順〔生年順|手動〕（TASK-111）。
+// タグ絞り込み〔タグ▼〕（TASK-110）+ 並び順〔生年順|手動〕（TASK-111）+
+// 表示範囲〔開始年〕〔終了年〕（TASK-112）。
 // 構成・見た目は screen-01-main-grid.html のとおり。
 // 残るコントロールの配線は後続タスクの管轄:
-// 年表切替=TASK-113、範囲=TASK-112、
+// 年表切替=TASK-113、
 // 入出力=TASK-201/202、
 // 画像出力=TASK-204。それまでは disabled の枠として置く（表示値はストアの実データを反映する）。
-import { useEffect, useRef, useState, type ChangeEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 
 import type { Store, Timeline } from '../../domain/schema';
+import { formatYear, type StoredYear } from '../../domain/year';
 import { tagDotColor, tagPillColors } from '../tagColor';
 import { useAppStore } from '../store/appStore';
 import { useSaveStore } from '../store/autosave';
 import controls from './controls.module.css';
+import {
+  RANGE_ERROR_MESSAGES,
+  parseRangeInputs,
+  rangeInputValues,
+  rangePlaceholders,
+  type RangeParseError,
+} from './rangeModel';
 import {
   hitCountLabel,
   isNoHit,
@@ -228,6 +237,93 @@ function ActiveTagPills({
   );
 }
 
+// 表示範囲〔開始年〕〔終了年〕（TASK-112 / ui-timeline-grid.md 7章 / US-006 /
+// screen-01 .range-wrap）。生入力はローカルに持ち、blur / Enter でまとめてコミットする
+// （キー入力ごとの適用は「1」「15」…の途中値でグリッドが跳ぶため）。空欄 = 自動で、
+// プレースホルダに自動値「1521（自動）」を薄く表示する。不正入力はインラインエラーを
+// 入力欄直下に出して適用しない（直前の適用値を維持）。エラーは開始 → 終了 → 反転の
+// 優先順で1件だけ表示する（モックアップにエラー状態の図例が無いため、searchNone と同じ
+// 「直下に重ねて出す」流儀で補完。2欄同時のエラー文は重なって読めなくなるため1件に絞る）
+function RangeInputs({ timeline }: { timeline: Timeline }) {
+  // 現在年 = 実行時のシステム日付の年（TimelineGrid と同じ流儀。domain は引数で受ける）
+  const currentYear = useMemo(() => new Date().getFullYear() as StoredYear, []);
+  const viewStart = timeline.view.startYear;
+  const viewEnd = timeline.view.endYear;
+  const [raw, setRaw] = useState<{ start: string; end: string }>(() =>
+    rangeInputValues(timeline.view),
+  );
+  const [error, setError] = useState<RangeParseError | null>(null);
+  // view の変化（コミット・年表切替・競合の読み直し）に表示を追従させる
+  // （表示は常に formatYear へ正規化。「-100」と打っても「前100」で表示する = US-005）
+  useEffect(() => {
+    const next = {
+      start: viewStart === null ? '' : formatYear(viewStart),
+      end: viewEnd === null ? '' : formatYear(viewEnd),
+    };
+    setRaw((prev) => (prev.start === next.start && prev.end === next.end ? prev : next));
+    setError(null);
+  }, [timeline.id, viewStart, viewEnd]);
+  const commit = () => {
+    const result = parseRangeInputs(raw.start, raw.end);
+    if (!result.ok) {
+      setError(result); // エラー時は適用しない（直前の適用値を維持）
+      return;
+    }
+    setError(null);
+    setRaw({
+      start: result.start === null ? '' : formatYear(result.start),
+      end: result.end === null ? '' : formatYear(result.end),
+    });
+    if (result.start !== viewStart || result.end !== viewEnd) {
+      useAppStore.getState().setViewRange(result.start, result.end);
+    }
+  };
+  const onKeyDown = (event: { key: string }) => {
+    if (event.key === 'Enter') {
+      commit();
+    }
+  };
+  const placeholders = rangePlaceholders(timeline, currentYear);
+  return (
+    <div className={styles.range}>
+      範囲
+      <input
+        className={`${styles.input} ${styles.rangeInput}`}
+        type="text"
+        placeholder={placeholders.start}
+        aria-label="開始年"
+        value={raw.start}
+        aria-invalid={error !== null && (error.field === 'start' || error.field === 'range')}
+        onChange={(event) => setRaw({ ...raw, start: event.target.value })}
+        onBlur={commit}
+        onKeyDown={onKeyDown}
+      />
+      〜
+      <input
+        className={`${styles.input} ${styles.rangeInput}`}
+        type="text"
+        placeholder={placeholders.end}
+        aria-label="終了年"
+        value={raw.end}
+        aria-invalid={error !== null && (error.field === 'end' || error.field === 'range')}
+        onChange={(event) => setRaw({ ...raw, end: event.target.value })}
+        onBlur={commit}
+        onKeyDown={onKeyDown}
+      />
+      {error !== null && (
+        <div
+          className={styles.rangeError}
+          data-testid="range-error"
+          data-code={error.code}
+          role="alert"
+        >
+          {RANGE_ERROR_MESSAGES[error.code]}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ズームトグル（US-007）。選択中の側の再クリックは何もしない
 // （無変更の setZoom で自動保存のデバウンスを起こさないため）
 function setZoomIfChanged(active: Timeline, zoom: Timeline['view']['zoom']): void {
@@ -305,24 +401,7 @@ export function Toolbar({
         <option value="birthAsc">並び順: 生年順</option>
         <option value="manual">並び順: 手動</option>
       </select>
-      <div className={styles.range}>
-        範囲
-        <input
-          className={`${styles.input} ${styles.rangeInput}`}
-          type="text"
-          placeholder="自動"
-          aria-label="開始年"
-          disabled
-        />
-        〜
-        <input
-          className={`${styles.input} ${styles.rangeInput}`}
-          type="text"
-          placeholder="自動"
-          aria-label="終了年"
-          disabled
-        />
-      </div>
+      <RangeInputs timeline={active} />
       <div className={styles.zoomToggle} role="group" aria-label="ズーム">
         <button
           type="button"

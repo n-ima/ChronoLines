@@ -12,3 +12,23 @@
   overflow: hidden;
   background: var(--color-bg);
 }
+
+/* 空の年表の中央空状態（TASK-112 / screen-01 .empty-state） */
+.emptyState {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.emptyIcon {
+  font-size: 40px; /* screen-01 .empty-state のアイコン寸法 */
+}
+
+.emptyText {
+  margin: 0;
+}
