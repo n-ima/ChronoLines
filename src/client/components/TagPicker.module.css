@@ -1,0 +1,98 @@
+/* タグピッカー（人物・イベントフォーム共通部品。screen-03-forms.html .tag-picker/.tag-pill）。
+   ピルの実色はタグ名から tagColor.ts が決めるトークン参照をインラインで与える
+   （8色パレットの正は tokens.css の --tag-N-*） */
+
+.picker {
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius);
+  padding: var(--space-2);
+}
+
+.assigned {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  min-height: 26px;
+}
+
+.none {
+  font-size: var(--font-size-small);
+  color: var(--color-text-muted);
+}
+
+.availLabel {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  margin: 8px 0 4px;
+}
+
+.avail {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.newtag {
+  display: flex;
+  gap: 6px;
+  margin-top: var(--space-2);
+  align-items: center;
+}
+
+.newtagInput {
+  flex: 1;
+  padding: 4px 8px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius);
+  font-size: var(--font-size-small);
+  font-family: inherit;
+  color: var(--color-text);
+  background: var(--color-bg);
+}
+
+.newtagSub {
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+/* ピル（角丸999px・パディング2px 10px・12px・ドット8px。design-tokens.md タグ配色） */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border-radius: 999px;
+  font-size: var(--font-size-small);
+  padding: 2px 10px;
+  line-height: 1.5;
+  white-space: nowrap;
+  cursor: pointer;
+  border: 0;
+  font-family: inherit;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.x {
+  opacity: 0.6;
+  margin-left: 2px;
+  font-size: 11px;
+}
+
+.pill:hover .x {
+  opacity: 1;
+}
+
+.addable {
+  composes: pill;
+  opacity: 0.85;
+}
+
+.addable:hover {
+  opacity: 1;
+  box-shadow: 0 0 0 1px currentColor inset;
+}

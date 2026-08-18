@@ -21,3 +21,11 @@
   /* 主要ボタンは「primary塗り + 白文字」（design-tokens.md 部品の共通規則） */
   color: #ffffff;
 }
+
+.btnDanger {
+  composes: btn;
+  background: var(--color-danger);
+  border-color: var(--color-danger);
+  /* 危険ボタンは「danger塗り + 白文字」（design-tokens.md 部品の共通規則） */
+  color: #ffffff;
+}

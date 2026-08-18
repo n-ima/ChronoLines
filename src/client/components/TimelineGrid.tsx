@@ -5,7 +5,7 @@
 // イベントレーン・選択列・サイドパネル（TASK-107）は年ヘッダー直下・グリッド右に、
 // 10年ズーム（TASK-108）は列軸の置き換えとして差し込む構成とし、ここでは作らない。
 import { useVirtualizer, type VirtualItem } from '@tanstack/react-virtual';
-import { memo, useMemo, useRef } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { sortedPersonIds } from '../../domain/query';
 import type { Person, Timeline } from '../../domain/schema';
@@ -40,12 +40,67 @@ function columnRuleClass(year: StoredYear, currentYear: StoredYear): string {
   return isDecadeGuideYear(year) ? ` ${styles.guideCol}` : '';
 }
 
+// 行メニュー（人物列の行クリックで開く。ui-forms-dialogs.md 1章「行メニュー〔編集〕〔削除〕」）
+type RowMenuState = { personId: string; x: number; y: number };
+
+const ROW_MENU_W = 160; // 画面端でのはみ出しクランプ用（.rowMenu の min-width と同値）
+const ROW_MENU_H = 80;
+
+function RowMenu({
+  menu,
+  onEdit,
+  onDelete,
+  onClose,
+}: {
+  menu: RowMenuState;
+  onEdit: () => void;
+  onDelete: () => void;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [onClose]);
+  const left = Math.max(0, Math.min(menu.x, window.innerWidth - ROW_MENU_W));
+  const top = Math.max(0, Math.min(menu.y, window.innerHeight - ROW_MENU_H));
+  return (
+    // 透明バックドロップ: メニュー外クリックで閉じる（クリックは下の要素へ通さない）
+    <div className={styles.menuBackdrop} onMouseDown={onClose}>
+      <div
+        className={styles.rowMenu}
+        style={{ left, top }}
+        role="menu"
+        aria-label="人物メニュー"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <button type="button" role="menuitem" className={styles.menuItem} onClick={onEdit}>
+          編集
+        </button>
+        <button
+          type="button"
+          role="menuitem"
+          className={`${styles.menuItem} ${styles.menuItemDanger}`}
+          onClick={onDelete}
+        >
+          削除
+        </button>
+      </div>
+    </div>
+  );
+}
+
 type GridRowProps = {
   person: Person;
   top: number;
   columns: GridColumns;
   virtualCols: VirtualItem[];
   currentYear: StoredYear;
+  onOpenMenu: (personId: string, x: number, y: number) => void;
 };
 
 // 行コンポーネントは memo 化し、縦スクロールでは可視域に入った行だけがマウントされる
@@ -56,6 +111,7 @@ const GridRow = memo(function GridRow({
   columns,
   virtualCols,
   currentYear,
+  onOpenMenu,
 }: GridRowProps) {
   return (
     <div className={styles.row} style={{ top, height: CELL_H }} data-person-id={person.id}>
@@ -63,6 +119,18 @@ const GridRow = memo(function GridRow({
         className={styles.nameCell}
         style={{ width: NAME_COL_W }}
         title={personTooltip(person)}
+        role="button"
+        tabIndex={0}
+        aria-haspopup="menu"
+        aria-label={`${person.name} のメニュー`}
+        onClick={(event) => onOpenMenu(person.id, event.clientX, event.clientY)}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            const rect = event.currentTarget.getBoundingClientRect();
+            onOpenMenu(person.id, rect.left + 8, rect.bottom);
+          }
+        }}
       >
         <span className={styles.name}>{person.name}</span>
         <span className={styles.years}>{lifespanLabel(person)}</span>
@@ -102,8 +170,25 @@ const GridRow = memo(function GridRow({
   );
 });
 
-export function TimelineGrid({ timeline }: { timeline: Timeline }) {
+export function TimelineGrid({
+  timeline,
+  onEditPerson,
+  onDeletePerson,
+}: {
+  timeline: Timeline;
+  // 行メニューの〔編集〕〔削除〕。ダイアログの状態は AppShell（ReadyContent）が持つ
+  onEditPerson: (personId: string) => void;
+  onDeletePerson: (personId: string) => void;
+}) {
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  const [menu, setMenu] = useState<RowMenuState | null>(null);
+  // GridRow は memo 化されているため、行へ渡すコールバックは安定参照にする
+  const openMenu = useCallback((personId: string, x: number, y: number) => {
+    setMenu({ personId, x, y });
+  }, []);
+  const closeMenu = useCallback(() => {
+    setMenu(null);
+  }, []);
 
   // 現在年 = 実行時のシステム日付の年（glossary.md「現在年」）。セッション中は固定でよい
   // （年またぎの瞬間の追随は要件にない）
@@ -181,11 +266,26 @@ export function TimelineGrid({ timeline }: { timeline: Timeline }) {
                 columns={columns}
                 virtualCols={virtualCols}
                 currentYear={currentYear}
+                onOpenMenu={openMenu}
               />
             );
           })}
         </div>
       </div>
+      {menu !== null && (
+        <RowMenu
+          menu={menu}
+          onClose={closeMenu}
+          onEdit={() => {
+            setMenu(null);
+            onEditPerson(menu.personId);
+          }}
+          onDelete={() => {
+            setMenu(null);
+            onDeletePerson(menu.personId);
+          }}
+        />
+      )}
     </div>
   );
 }

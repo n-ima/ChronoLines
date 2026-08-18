@@ -1,7 +1,7 @@
-// ツールバーの枠（TASK-101）+ 保存状態表示（TASK-103）。構成・見た目は
-// screen-01-main-grid.html のとおり。各コントロールの動作の配線は後続タスクの管轄:
+// ツールバーの枠（TASK-101）+ 保存状態表示（TASK-103）+ 〔＋人物〕（TASK-105）。
+// 構成・見た目は screen-01-main-grid.html のとおり。残るコントロールの配線は後続タスクの管轄:
 // 年表切替=TASK-113、検索=TASK-109、タグ=TASK-110、並び順=TASK-111、範囲=TASK-112、
-// ズーム=TASK-108、＋人物=TASK-105、＋イベント=TASK-106、入出力=TASK-201/202、
+// ズーム=TASK-108、＋イベント=TASK-106、入出力=TASK-201/202、
 // 画像出力=TASK-204。それまでは disabled の枠として置く（表示値はストアの実データを反映する）。
 import type { Store } from '../../domain/schema';
 import { useSaveStore } from '../store/autosave';
@@ -28,7 +28,14 @@ function SaveStatus() {
   );
 }
 
-export function Toolbar({ store }: { store: Store }) {
+export function Toolbar({
+  store,
+  onAddPerson,
+}: {
+  store: Store;
+  // 〔＋人物〕→ 人物フォーム（新規）を開く（TASK-105。ダイアログの状態は AppShell が持つ）
+  onAddPerson: () => void;
+}) {
   const active = store.timelines.find((t) => t.id === store.activeTimelineId);
   if (active === undefined) {
     // storeSchema の参照整合性（E-STORE-ACTIVE-MISSING）検証済みのため通常到達しない。
@@ -93,7 +100,7 @@ export function Toolbar({ store }: { store: Store }) {
         </button>
       </div>
       <div className={styles.grow} />
-      <button type="button" className={controls.btnPrimary} disabled>
+      <button type="button" className={controls.btnPrimary} onClick={onAddPerson}>
         ＋人物
       </button>
       <button type="button" className={controls.btn} disabled>

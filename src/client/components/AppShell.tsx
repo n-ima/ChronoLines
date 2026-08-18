@@ -5,12 +5,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { z } from 'zod';
 
+import { allTags } from '../../domain/query';
 import type { Store } from '../../domain/schema';
-import { useAppStore } from '../store/appStore';
+import { useAppStore, type DeletePersonEventPolicy, type PersonInput } from '../store/appStore';
 import { startAutosave, storeResponseSchema } from '../store/autosave';
 import styles from './AppShell.module.css';
 import { ConflictDialog } from './ConflictDialog';
 import controls from './controls.module.css';
+import { DeletePersonDialog } from './DeletePersonDialog';
+import { PersonFormDialog } from './PersonFormDialog';
+import { personalEventsOf } from './personFormModel';
 import { RootErrorBoundary } from './RootErrorBoundary';
 import { SaveErrorBanner } from './SaveErrorBanner';
 import screen from './statusScreen.module.css';
@@ -70,9 +74,23 @@ async function fetchInitialStore(): Promise<FetchResult> {
   return { phase: 'store-error', code, message, detail, dataPath, fileVersion };
 }
 
+// 人物フォームの表示状態（TASK-105）。edit の person は id で持ち、描画時に最新の
+// ストアから引き直す（生年編集の反映などでフォームと表示の正が食い違わないように）
+type PersonDialogState = { mode: 'add' } | { mode: 'edit'; personId: string };
+
 // ready フェーズの中身。appStore を購読し、以後のミューテーションが表示へ反映される
 function ReadyContent() {
   const store = useAppStore((s) => s.store);
+  // ダイアログの状態（フックは早期 throw より前に置く）
+  const [personDialog, setPersonDialog] = useState<PersonDialogState | null>(null);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const openAddPerson = useCallback(() => setPersonDialog({ mode: 'add' }), []);
+  const openEditPerson = useCallback(
+    (personId: string) => setPersonDialog({ mode: 'edit', personId }),
+    [],
+  );
+  const openDeletePerson = useCallback((personId: string) => setDeleteTargetId(personId), []);
+
   if (store === null) {
     // initializeStore 後にのみ描画されるため通常到達しない。到達したら不整合なので
     // 黙って空画面にせず明示的に失敗させる（ルートエラー境界が受ける）
@@ -83,15 +101,67 @@ function ReadyContent() {
     // storeSchema の参照整合性検証済みのため通常到達しない（Toolbar と同じ明示的失敗）
     throw new Error('E-STORE-ACTIVE-MISSING: activeTimelineId が timelines に存在しません');
   }
+
+  // 編集対象・削除対象は最新のストアから引き直す（すでに消えていたら描画しない）
+  const editingPerson =
+    personDialog?.mode === 'edit'
+      ? (active.persons.find((p) => p.id === personDialog.personId) ?? null)
+      : null;
+  const deleteTarget =
+    deleteTargetId === null ? null : (active.persons.find((p) => p.id === deleteTargetId) ?? null);
+
+  const handleSavePerson = (input: PersonInput) => {
+    if (personDialog?.mode === 'edit') {
+      useAppStore.getState().updatePerson(personDialog.personId, input);
+    } else {
+      useAppStore.getState().addPerson(input);
+    }
+    setPersonDialog(null);
+  };
+
+  const handleDeletePerson = (policy: DeletePersonEventPolicy) => {
+    if (deleteTargetId !== null) {
+      useAppStore.getState().deletePerson(deleteTargetId, policy);
+    }
+    setDeleteTargetId(null);
+    // フォーム内〔削除...〕経由で開いていた場合は、消えた人物のフォームも閉じる
+    setPersonDialog(null);
+  };
+
   return (
     <div className={styles.shell}>
-      <Toolbar store={store} />
+      <Toolbar store={store} onAddPerson={openAddPerson} />
       {/* 保存失敗の常設バナーはグリッド上部全幅（design-tokens.md 部品の共通規則） */}
       <SaveErrorBanner />
       {/* main はグリッド + サイドパネル（TASK-107）の横並びの器（screen-01 .main） */}
       <main className={styles.main} aria-label="年表グリッド">
-        <TimelineGrid timeline={active} />
+        <TimelineGrid
+          timeline={active}
+          onEditPerson={openEditPerson}
+          onDeletePerson={openDeletePerson}
+        />
       </main>
+      {personDialog !== null && (personDialog.mode === 'add' || editingPerson !== null) && (
+        <PersonFormDialog
+          // 開くたびに初期値から作り直す（別人物の編集へ切り替わったとき状態を残さない）
+          key={personDialog.mode === 'edit' ? personDialog.personId : 'add'}
+          person={editingPerson}
+          registeredTags={allTags(active)}
+          onSave={handleSavePerson}
+          onRequestDelete={
+            personDialog.mode === 'edit' ? () => setDeleteTargetId(personDialog.personId) : null
+          }
+          onClose={() => setPersonDialog(null)}
+        />
+      )}
+      {deleteTarget !== null && (
+        <DeletePersonDialog
+          person={deleteTarget}
+          personalEvents={personalEventsOf(active, deleteTarget.id)}
+          onDelete={handleDeletePerson}
+          onClose={() => setDeleteTargetId(null)}
+        />
+      )}
       <ConflictDialog />
     </div>
   );

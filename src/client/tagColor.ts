@@ -17,3 +17,9 @@ export function tagColorIndex(name: string): number {
 export function tagDotColor(name: string): string {
   return `var(--tag-${tagColorIndex(name)}-dot)`;
 }
+
+// タグピル（淡い背景 + 濃い文字。design-tokens.md「タグ配色」）のインラインスタイル値
+export function tagPillColors(name: string): { background: string; color: string } {
+  const index = tagColorIndex(name);
+  return { background: `var(--tag-${index}-bg)`, color: `var(--tag-${index}-text)` };
+}

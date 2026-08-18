@@ -25,4 +25,4 @@ Windows環境の例: `- [YYYY-MM-DD] cwdのドライブレターが小文字(d:\
 ## 教訓
 
 - [2026-08-12] vite dev サーバーは IPv6(::1) で listen するため、Playwright の page.goto や curl での疎通確認は `127.0.0.1:5173` ではなく `localhost:5173` を使う（127.0.0.1 直指定だと接続拒否になる）
-- [2026-08-12] Git Bash から taskkill を使うときは `MSYS2_ARG_CONV_EXCL="*" taskkill //F //PID <pid>` のように引数変換を止める（`/F` がパス変換で `F:/` に化けて失敗する）
+- [2026-08-12] Git Bash から taskkill を使うときは引数変換を止めた上でスラッシュ1つ: `MSYS2_ARG_CONV_EXCL="*" taskkill /F /T /PID <pid>`（変換を止めずに `/F` だとパス変換で `F:/` に化け、変換を止めて `//F` だと literal `//F` のまま渡って「無効な引数」になる。2026-08-18 実測で訂正）

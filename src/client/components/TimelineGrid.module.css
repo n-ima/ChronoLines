@@ -59,7 +59,7 @@
   width: 100%;
 }
 
-/* 人物列（左に sticky。screen-01 .name-cell） */
+/* 人物列（左に sticky。screen-01 .name-cell）。クリックで行メニュー（編集/削除）を開く */
 .nameCell {
   position: sticky;
   left: 0;
@@ -72,6 +72,7 @@
   background: var(--color-surface);
   border-right: 2px solid var(--color-border-strong);
   border-bottom: 1px solid var(--color-border);
+  cursor: pointer;
 }
 
 .name {
@@ -152,4 +153,42 @@
 
 .currentCol {
   border-right: 2px solid var(--color-current-year);
+}
+
+/* ===== 行メニュー（人物列の行クリック → 編集/削除。ui-forms-dialogs.md 1章） ===== */
+.menuBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+}
+
+.rowMenu {
+  position: fixed;
+  min-width: 160px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius);
+  padding: var(--space-1);
+  display: flex;
+  flex-direction: column;
+}
+
+.menuItem {
+  border: 0;
+  background: none;
+  text-align: left;
+  padding: 6px 10px;
+  font-size: 13px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  color: var(--color-text);
+  font-family: inherit;
+}
+
+.menuItem:hover {
+  background: var(--color-surface);
+}
+
+.menuItemDanger {
+  color: var(--color-danger);
 }
