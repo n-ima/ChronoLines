@@ -1,0 +1,79 @@
+/* リカバリ画面（screen-03-forms.html .recovery / .rec-card）。通常UIの代わりに全画面表示。
+   色はトークンのみ。寸法はモックアップのとおり（カード 24px / 560px / radius-lg） */
+
+.screen {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-surface);
+  padding: var(--space-4);
+}
+
+.card {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  width: 560px;
+  max-width: 92vw;
+  max-height: 92vh;
+  overflow: auto;
+}
+
+.title {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: var(--space-2);
+}
+
+.text {
+  font-size: 13px;
+  line-height: 1.7;
+  margin-bottom: var(--space-2);
+  overflow-wrap: break-word; /* データファイルの長いパスでも画面からはみ出さない */
+}
+
+/* 「次のいずれかで復旧できます:」の行（screen-03 はここだけ margin-top:12px） */
+.textLead {
+  composes: text;
+  margin-top: var(--space-3);
+}
+
+.list {
+  margin: var(--space-2) 0 var(--space-2) 20px;
+  font-size: 13px;
+  line-height: 2;
+  overflow-wrap: break-word;
+}
+
+.code {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 3px;
+  padding: 0 4px;
+  font-size: var(--font-size-small);
+  overflow-wrap: anywhere; /* 区切りの無い長いフルパス（C:\...\chronolines.json.bak）用 */
+}
+
+/* 技術的 detail の折りたたみ（ui-forms-dialogs.md 7章。screen-03 details と同じトーン） */
+.detail {
+  margin-top: var(--space-2);
+  font-size: var(--font-size-small);
+  color: var(--color-text-muted);
+  overflow-wrap: break-word;
+}
+
+.actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+  flex-wrap: wrap;
+}
+
+/* 補足（「修復後はサーバーを再起動してから再試行」の明記。ui-forms-dialogs.md 6章） */
+.note {
+  font-size: var(--font-size-small);
+  color: var(--color-text-muted);
+  margin-top: var(--space-2);
+}

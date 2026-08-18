@@ -1,7 +1,8 @@
 // アプリシェル（ui-timeline-grid.md 1章・9章）: ルートエラー境界 + 起動時ロードの状態切替。
 // ロード成功後のデータの正は appStore（Zustand。TASK-102）が保持し、自動保存・rev 管理は
 // store/autosave.ts（TASK-103）が担う。本コンポーネントはロードフェーズの管理と自動保存の
-// 開始だけを持つ。グリッドは TASK-104、リカバリ画面の本実装（復旧操作）は TASK-203 の管轄。
+// 開始だけを持つ。グリッドは TASK-104、リカバリ画面（GET 409 時の復旧操作）は
+// RecoveryScreen（TASK-203）の管轄。
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { z } from 'zod';
 
@@ -27,6 +28,7 @@ import { PersonFormDialog } from './PersonFormDialog';
 import { personalEventsOf } from './personFormModel';
 import { RangeBanner } from './RangeBanner';
 import { isTimelineEmpty } from './rangeModel';
+import { RecoveryScreen } from './RecoveryScreen';
 import { RootErrorBoundary } from './RootErrorBoundary';
 import { SaveErrorBanner } from './SaveErrorBanner';
 import {
@@ -501,22 +503,10 @@ function ShellContent() {
   }
 
   if (load.phase === 'store-error') {
-    // E-STORE-CORRUPT / E-STORE-NEWER。リカバリ画面の本実装（JSON復旧・空データで開始等）は
-    // TASK-203（ui-forms-dialogs.md 6章）。ここでは事実の表示のみ行う（書き込み操作は無い =
-    // 既存ファイルには一切触らない。US-010）
-    return (
-      <div className={screen.screen} role="alert">
-        <h1 className={screen.title}>{load.message}</h1>
-        <p className={screen.note}>エラーコード: {load.code}</p>
-        {load.detail !== undefined && <p className={screen.note}>{load.detail}</p>}
-        {load.fileVersion !== undefined && (
-          <p className={screen.note}>保存ファイルの形式バージョン: {load.fileVersion}</p>
-        )}
-        {load.dataPath !== undefined && (
-          <p className={screen.note}>データファイル: {load.dataPath}</p>
-        )}
-      </div>
-    );
+    // E-STORE-CORRUPT / E-STORE-NEWER = リカバリ画面（ui-forms-dialogs.md 6章）。
+    // recovery:true の PUT 成功後はサーバーが ok 状態になっているため、GET からやり直して
+    // ready へ進む（reload。autosave も新しい rev で開始される）
+    return <RecoveryScreen error={load} onRecovered={reload} />;
   }
 
   return <ReadyContent />;
